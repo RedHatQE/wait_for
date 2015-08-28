@@ -79,8 +79,8 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
     message = kwargs.get('message', None)
 
     if isinstance(func, partial):
-        line_no = "<partial>"
-        filename = "<partial>"
+        line_no = func.func.func_code.co_firstlineno
+        filename = func.func.func_code.co_filename
         if not message:
             params = ", ".join([str(arg) for arg in func.args])
             message = "partial function %s(%s)" % (func.func.func_name, params)
