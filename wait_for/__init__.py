@@ -111,12 +111,17 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
         try:
             tries += 1
             out = func(*func_args, **func_kwargs)
-        except:
+        except Exception as e:
+            logger.info("wait_for hit an exception: {}: {}".format(type(e).__name__, str(e)))
             if handle_exception:
                 out = fail_condition
+                logger.info("Call failed with following exception, but continuing "
+                            "as handle_exception is set to True")
             else:
-                logger.info("Wait for {} took {} tries and {} seconds before failure.".format(
-                    message, tries, time.time() - st_time))
+                logger.info(
+                    "Wait for {} took {} tries and {} seconds "
+                    "before failure from an exception.".format(
+                        message, tries, time.time() - st_time))
                 raise
         if out is fail_condition or fail_condition_check(out):
             time.sleep(delay)
