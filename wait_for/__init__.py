@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+import six
 import time
 from collections import namedtuple
 from datetime import datetime, timedelta
@@ -66,7 +68,7 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
         timeout = kwargs["timeout"]
         if isinstance(timeout, (int, float)):
             num_sec = float(timeout)
-        elif isinstance(timeout, basestring):
+        elif isinstance(timeout, six.string_types):
             num_sec = _parse_time(timeout)
         elif isinstance(timeout, timedelta):
             num_sec = timeout.total_seconds()
@@ -79,14 +81,16 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
     message = kwargs.get('message', None)
 
     if isinstance(func, partial):
-        line_no = func.func.func_code.co_firstlineno
-        filename = func.func.func_code.co_filename
+        f_code = six.get_function_code(func.func)
+        line_no = f_code.co_firstlineno
+        filename = f_code.co_filename
         if not message:
             params = ", ".join([str(arg) for arg in func.args])
             message = "partial function %s(%s)" % (func.func.func_name, params)
     else:
-        line_no = func.func_code.co_firstlineno
-        filename = func.func_code.co_filename
+        f_code = six.get_function_code(func)
+        line_no = f_code.co_firstlineno
+        filename = f_code.co_filename
         if not message:
             message = "function %s()" % func.func_name
 
@@ -118,7 +122,7 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
             tries += 1
             out = func(*func_args, **func_kwargs)
         except Exception as e:
-            logger.info("wait_for hit an exception: {}: {}".format(type(e).__name__, str(e)))
+            logger.info("wait_for hit an exception: {}: {}".format(type(e).__name__, e))
             if handle_exception:
                 out = fail_condition
                 logger.info("Call failed with following exception, but continuing "
@@ -147,12 +151,12 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
     if not silent_fail:
         logger.error("Couldn't complete {} at {}:{} in time, took {:0.2f}, {} tries".format(message,
             filename, line_no, t_delta, tries))
-        logger.error('The last result of the call was: {}'.format(str(out)))
+        logger.error('The last result of the call was: {}'.format(out))
         raise TimedOutError("Could not do {} at {}:{} in time".format(message, filename, line_no))
     else:
         logger.warning("Could not do {} at {}:{} in time ({} tries) but ignoring".format(message,
             filename, line_no, tries))
-        logger.warning('The last result of the call was: {}'.format(str(out)))
+        logger.warning('The last result of the call was: {}'.format(out))
 
 
 def wait_for_decorator(*args, **kwargs):
