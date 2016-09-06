@@ -86,13 +86,13 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
         filename = f_code.co_filename
         if not message:
             params = ", ".join([str(arg) for arg in func.args])
-            message = "partial function %s(%s)" % (func.func.func_name, params)
+            message = "partial function %s(%s)" % (func.func.__name__, params)
     else:
         f_code = six.get_function_code(func)
         line_no = f_code.co_firstlineno
         filename = f_code.co_filename
         if not message:
-            message = "function %s()" % func.func_name
+            message = "function %s()" % func.__name__
 
     fail_condition = kwargs.get('fail_condition', False)
 
