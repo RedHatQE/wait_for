@@ -92,12 +92,18 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
 
     fail_condition = kwargs.get('fail_condition', False)
 
+    def check_result_in_fail_condition(fail_condition, result):
+        return result in fail_condition
+
+    def check_result_is_fail_condition(fail_condition, result):
+        return result == fail_condition
+
     if callable(fail_condition):
         fail_condition_check = fail_condition
     elif isinstance(fail_condition, set):
-        fail_condition_check = lambda result: result in fail_condition
+        fail_condition_check = partial(check_result_in_fail_condition, fail_condition)
     else:
-        fail_condition_check = lambda result: result == fail_condition
+        fail_condition_check = partial(check_result_is_fail_condition, fail_condition)
     handle_exception = kwargs.get('handle_exception', False)
     delay = kwargs.get('delay', 1)
     fail_func = kwargs.get('fail_func', None)
