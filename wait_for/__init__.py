@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import six
 import time
+import logging
 from collections import namedtuple
 from datetime import datetime, timedelta
 from functools import partial
@@ -11,6 +12,10 @@ import parsedatetime
 WaitForResult = namedtuple("WaitForResult", ["out", "duration"])
 
 calendar = parsedatetime.Calendar()
+
+default_hidden_logger = logging.getLogger('wait_for.default')
+default_hidden_logger.propagate = False
+default_hidden_logger.addHandler(logging.NullHandler())
 
 
 def _parse_time(t):
@@ -61,7 +66,7 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
     Raises:
         TimedOutError: If num_sec is exceeded after an unsuccessful func() invocation.
     """
-    logger = Logger(logger)
+    logger = logger or default_hidden_logger
     st_time = time.time()
     total_time = 0
     if "timeout" in kwargs and kwargs["timeout"] is not None:
@@ -116,7 +121,7 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
 
     t_delta = 0
     tries = 0
-    logger.trace('Started {} at {}'.format(message, st_time))
+    logger.debug('Started {} at {}'.format(message, st_time))
     while t_delta <= num_sec:
         try:
             tries += 1
@@ -143,11 +148,11 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
         else:
             duration = time.time() - st_time
             if not quiet:
-                logger.trace('Took {:0.2f} to do {}'.format(duration, message))
-            logger.trace('Finished {} at {}, {} tries'.format(message, st_time + t_delta, tries))
+                logger.debug('Took {:0.2f} to do {}'.format(duration, message))
+            logger.debug('Finished {} at {}, {} tries'.format(message, st_time + t_delta, tries))
             return WaitForResult(out, duration)
         t_delta = time.time() - st_time
-    logger.trace('Finished at {}'.format(st_time + t_delta))
+    logger.debug('Finished at {}'.format(st_time + t_delta))
     if not silent_fail:
         logger.error("Couldn't complete {} at {}:{} in time, took {:0.2f}, {} tries".format(message,
             filename, line_no, t_delta, tries))
@@ -220,28 +225,6 @@ class RefreshTimer(object):
             return True
         else:
             return False
-
-
-class Logger(object):
-    """ A simple logger proxy object
-
-    If there is no logger, then we just return a catch_all function for the
-    logger that accepts all args and does nothing, else we try to call the
-    attribute on the real logger object that is passed in.
-    """
-
-    def __init__(self, logger=None):
-        self.logger = logger
-
-    def _catch_all(self, *args, **kwargs):
-        return None
-
-    def __getattr__(self, name):
-        if self.logger:
-            return getattr(self.logger, name)
-        else:
-            return self._catch_all
-
 
 def pytest_namespace():
     # Expose the waiting function in pytest
