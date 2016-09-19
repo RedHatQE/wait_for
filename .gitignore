@@ -1,0 +1,9 @@
+# pbr
+AUTHORS
+ChangeLog
+# python
+*.pyc
+*.egg-info/
+.cache/
+.tox/
+.eggs/
