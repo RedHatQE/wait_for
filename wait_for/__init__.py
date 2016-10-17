@@ -60,6 +60,7 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
             again.
         fail_func: A function to be run after every unsuccessful attempt to run func()
         quiet: Do not write time report to the log (default False)
+        very_quiet: Do not log unless there was an error (default False). Implies quiet.
         silent_failure: Even if the entire attempt times out, don't throw a exception.
     Returns:
         A tuple containing the output from func() and a float detailing the total wait time.
@@ -117,11 +118,15 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
     delay = kwargs.get('delay', 1)
     fail_func = kwargs.get('fail_func', None)
     quiet = kwargs.get("quiet", False)
+    very_quiet = kwargs.get("very_quiet", False)
+    if very_quiet:
+        quiet = True
     silent_fail = kwargs.get("silent_failure", False)
 
     t_delta = 0
     tries = 0
-    logger.debug('Started {} at {}'.format(message, st_time))
+    if not very_quiet:
+        logger.debug('Started {} at {}'.format(message, st_time))
     while t_delta <= num_sec:
         try:
             tries += 1
@@ -149,10 +154,13 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
             duration = time.time() - st_time
             if not quiet:
                 logger.debug('Took {:0.2f} to do {}'.format(duration, message))
-            logger.debug('Finished {} at {}, {} tries'.format(message, st_time + t_delta, tries))
+            if not very_quiet:
+                logger.debug(
+                    'Finished {} at {}, {} tries'.format(message, st_time + t_delta, tries))
             return WaitForResult(out, duration)
         t_delta = time.time() - st_time
-    logger.debug('Finished at {}'.format(st_time + t_delta))
+    if not very_quiet:
+        logger.debug('Finished at {}'.format(st_time + t_delta))
     if not silent_fail:
         logger.error("Couldn't complete {} at {}:{} in time, took {:0.2f}, {} tries".format(message,
             filename, line_no, t_delta, tries))
