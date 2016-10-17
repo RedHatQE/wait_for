@@ -234,6 +234,7 @@ class RefreshTimer(object):
         else:
             return False
 
+
 def pytest_namespace():
     # Expose the waiting function in pytest
     return {'wait_for': wait_for_decorator}
