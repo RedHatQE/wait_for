@@ -28,6 +28,56 @@ def _parse_time(t):
     return (parsed - datetime.now()).total_seconds()
 
 
+def _get_timeout_secs(kwargs):
+    if "timeout" in kwargs and kwargs["timeout"] is not None:
+        timeout = kwargs["timeout"]
+        if isinstance(timeout, (int, float)):
+            num_sec = float(timeout)
+        elif isinstance(timeout, six.string_types):
+            num_sec = _parse_time(timeout)
+        elif isinstance(timeout, timedelta):
+            num_sec = timeout.total_seconds()
+        else:
+            raise ValueError("Timeout got an unknown value {}".format(timeout))
+    else:
+        num_sec = kwargs.get('num_sec', 120)
+    return num_sec
+
+
+def _get_context(func, message=None):
+    if isinstance(func, partial):
+        f_code = six.get_function_code(func.func)
+        line_no = f_code.co_firstlineno
+        filename = f_code.co_filename
+        if not message:
+            params = ", ".join([str(arg) for arg in func.args])
+            message = "partial function %s(%s)" % (func.func.__name__, params)
+    else:
+        f_code = six.get_function_code(func)
+        line_no = f_code.co_firstlineno
+        filename = f_code.co_filename
+        if not message:
+            message = "function %s()" % func.__name__
+    return f_code, line_no, filename, message
+
+
+def check_result_in_fail_condition(fail_condition, result):
+    return result in fail_condition
+
+
+def check_result_is_fail_condition(fail_condition, result):
+    return result == fail_condition
+
+
+def _get_failcondition_check(fail_condition):
+    if callable(fail_condition):
+        return fail_condition
+    elif isinstance(fail_condition, set):
+        return partial(check_result_in_fail_condition, fail_condition)
+    else:
+        return partial(check_result_is_fail_condition, fail_condition)
+
+
 def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
     """Waits for a certain amount of time for an action to complete
     Designed to wait for a certain length of time,
@@ -70,57 +120,19 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
     logger = logger or default_hidden_logger
     st_time = time.time()
     total_time = 0
-    if "timeout" in kwargs and kwargs["timeout"] is not None:
-        timeout = kwargs["timeout"]
-        if isinstance(timeout, (int, float)):
-            num_sec = float(timeout)
-        elif isinstance(timeout, six.string_types):
-            num_sec = _parse_time(timeout)
-        elif isinstance(timeout, timedelta):
-            num_sec = timeout.total_seconds()
-        else:
-            raise ValueError("Timeout got an unknown value {}".format(timeout))
-    else:
-        num_sec = kwargs.get('num_sec', 120)
 
+    num_sec = _get_timeout_secs(kwargs)
     expo = kwargs.get('expo', False)
-    message = kwargs.get('message', None)
 
-    if isinstance(func, partial):
-        f_code = six.get_function_code(func.func)
-        line_no = f_code.co_firstlineno
-        filename = f_code.co_filename
-        if not message:
-            params = ", ".join([str(arg) for arg in func.args])
-            message = "partial function %s(%s)" % (func.func.__name__, params)
-    else:
-        f_code = six.get_function_code(func)
-        line_no = f_code.co_firstlineno
-        filename = f_code.co_filename
-        if not message:
-            message = "function %s()" % func.__name__
+    f_code, line_no, filename, message = _get_context(func, kwargs.get('message', None))
 
     fail_condition = kwargs.get('fail_condition', False)
-
-    def check_result_in_fail_condition(fail_condition, result):
-        return result in fail_condition
-
-    def check_result_is_fail_condition(fail_condition, result):
-        return result == fail_condition
-
-    if callable(fail_condition):
-        fail_condition_check = fail_condition
-    elif isinstance(fail_condition, set):
-        fail_condition_check = partial(check_result_in_fail_condition, fail_condition)
-    else:
-        fail_condition_check = partial(check_result_is_fail_condition, fail_condition)
+    fail_condition_check = _get_failcondition_check(fail_condition)
     handle_exception = kwargs.get('handle_exception', False)
     delay = kwargs.get('delay', 1)
     fail_func = kwargs.get('fail_func', None)
-    quiet = kwargs.get("quiet", False)
     very_quiet = kwargs.get("very_quiet", False)
-    if very_quiet:
-        quiet = True
+    quiet = kwargs.get("quiet", False) or very_quiet
     silent_fail = kwargs.get("silent_failure", False)
 
     t_delta = 0
