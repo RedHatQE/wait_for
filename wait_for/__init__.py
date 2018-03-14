@@ -109,6 +109,7 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
         delay: An integer describing the number of seconds to delay before trying func()
             again.
         fail_func: A function to be run after every unsuccessful attempt to run func()
+        timeout_func: A function to be run after timeout instead of raising ``TimedOutError``
         quiet: Do not write time report to the log (default False)
         very_quiet: Do not log unless there was an error (default False). Implies quiet.
         silent_failure: Even if the entire attempt times out, don't throw a exception.
@@ -131,6 +132,7 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
     handle_exception = kwargs.get('handle_exception', False)
     delay = kwargs.get('delay', 1)
     fail_func = kwargs.get('fail_func', None)
+    timeout_func = kwargs.get('timeout_func', None)
     very_quiet = kwargs.get("very_quiet", False)
     quiet = kwargs.get("quiet", False) or very_quiet
     silent_fail = kwargs.get("silent_failure", False)
@@ -177,7 +179,11 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
         logger.error("Couldn't complete {} at {}:{} in time, took {:0.2f}, {} tries".format(message,
             filename, line_no, t_delta, tries))
         logger.error('The last result of the call was: {}'.format(out))
-        raise TimedOutError("Could not do {} at {}:{} in time".format(message, filename, line_no))
+        if timeout_func:
+            return timeout_func()
+        else:
+            raise TimedOutError("Could not do {} at {}:{} in time".format(
+                                message, filename, line_no))
     else:
         logger.warning("Could not do {} at {}:{} in time ({} tries) but ignoring".format(message,
             filename, line_no, tries))

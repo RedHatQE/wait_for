@@ -82,3 +82,13 @@ def test_nonnumeric_numsec_timedelta_via_string():
     with pytest.raises(TimedOutError):
         wait_for(func,
                  timeout="2s", delay=1)
+
+
+def test_timeout_func():
+    incman = Incrementor()
+
+    result = wait_for(
+        lambda: incman.i_sleep_a_lot() > 10,
+        num_sec=1, message="lambda_long_wait",
+        timeout_func=lambda: "Success")
+    assert result == "Success", "wait_for should return a string"
