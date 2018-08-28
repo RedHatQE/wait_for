@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
+import gevent
+import logging
 import six
 import time
-import logging
+
 from collections import namedtuple
 from datetime import datetime, timedelta
 from functools import partial
@@ -134,6 +136,7 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
     very_quiet = kwargs.get("very_quiet", False)
     quiet = kwargs.get("quiet", False) or very_quiet
     silent_fail = kwargs.get("silent_failure", False)
+    precise_wait = kwargs.get('precise_wait', False)
 
     t_delta = 0
     tries = 0
@@ -142,7 +145,14 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
     while t_delta <= num_sec:
         try:
             tries += 1
-            out = func(*func_args, **func_kwargs)
+            if precise_wait:
+                with gevent.Timeout(num_sec):
+                    out = func(*func_args, **func_kwargs)
+            else:
+                out = func(*func_args, **func_kwargs)
+        except gevent.Timeout:
+            raise TimedOutError(
+                "Could not do {} at {}:{} in time".format(message, filename, line_no))
         except Exception as e:
             logger.info("wait_for hit an exception: {}: {}".format(type(e).__name__, e))
             if handle_exception:
@@ -155,6 +165,7 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
                     "before failure from an exception.".format(
                         message, tries, time.time() - st_time))
                 raise
+
         if out is fail_condition or fail_condition_check(out):
             time.sleep(delay)
             total_time += delay
