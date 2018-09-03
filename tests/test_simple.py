@@ -3,7 +3,7 @@
 import pytest
 import time
 from functools import partial
-from wait_for import wait_for, TimedOutError
+from wait_for import wait_for, wait_for_decorator, TimedOutError
 
 
 class Incrementor():
@@ -59,7 +59,7 @@ def test_callable_fail_condition():
 def test_wait_decorator():
     incman = Incrementor()
 
-    @pytest.wait_for(fail_condition=0, delay=.05)
+    @wait_for_decorator(fail_condition=0, delay=.05)
     def a_test():
         incman.i_sleep_a_lot()
     print("Function output {} in time {} ".format(a_test.out, a_test.duration))
@@ -69,7 +69,7 @@ def test_wait_decorator():
 def test_wait_decorator_noparams():
     incman = Incrementor()
 
-    @pytest.wait_for
+    @wait_for_decorator()
     def a_test():
         return incman.i_sleep_a_lot() != 0
     print("Function output {} in time {} ".format(a_test.out, a_test.duration))
