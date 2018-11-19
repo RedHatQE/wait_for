@@ -179,8 +179,11 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
     if not very_quiet:
         logger.debug("Finished '{}' at {}".format(message, st_time + t_delta))
     if not silent_fail:
-        logger.error("Couldn't complete '{}' at {}:{} in time, took {:0.2f}, {} tries".format(message,
-            filename, line_no, t_delta, tries))
+        logger.error(
+            "Couldn't complete '{}' at {}:{} in time, took {:0.2f}, {} tries".format(
+                message, filename, line_no, t_delta, tries
+            )
+        )
         logger.error('The last result of the call was: {}'.format(out))
         raise TimedOutError("Could not do '{}' at {}:{} in time".format(message, filename, line_no))
     else:
