@@ -126,6 +126,9 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
     Raises:
         TimedOutError: If num_sec is exceeded after an unsuccessful func() invocation.
     """
+    # Hide this call in the detailed traceback
+    # https://docs.pytest.org/en/latest/example/simple.html#writing-well-integrated-assertion-helpers
+    __tracebackhide__ = True
     logger = logger or default_hidden_logger
     st_time = time.time()
     total_time = 0
