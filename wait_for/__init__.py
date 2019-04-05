@@ -6,6 +6,8 @@ from collections import namedtuple
 from datetime import datetime, timedelta
 from functools import partial
 from threading import Timer
+from types import LambdaType
+import inspect
 
 import parsedatetime
 
@@ -44,6 +46,10 @@ def _get_timeout_secs(kwargs):
     return num_sec
 
 
+def is_lambda_function(obj):
+    return isinstance(obj, LambdaType) and obj.__name__ == "<lambda>"
+
+
 def _get_context(func, message=None):
     if isinstance(func, partial):
         f_code = six.get_function_code(func.func)
@@ -57,7 +63,10 @@ def _get_context(func, message=None):
         line_no = f_code.co_firstlineno
         filename = f_code.co_filename
         if not message:
-            message = "function %s()" % func.__name__
+            if is_lambda_function(func):
+                message = 'lambda defined as `{}`'.format(inspect.getsource(func).strip())
+            else:
+                message = "function %s()" % func.__name__
     return f_code, line_no, filename, message
 
 
@@ -117,6 +126,9 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
     Raises:
         TimedOutError: If num_sec is exceeded after an unsuccessful func() invocation.
     """
+    # Hide this call in the detailed traceback
+    # https://docs.pytest.org/en/latest/example/simple.html#writing-well-integrated-assertion-helpers
+    __tracebackhide__ = True
     logger = logger or default_hidden_logger
     st_time = time.time()
     total_time = 0
