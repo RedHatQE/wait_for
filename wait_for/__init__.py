@@ -64,7 +64,13 @@ def _get_context(func, message=None):
         filename = f_code.co_filename
         if not message:
             if is_lambda_function(func):
-                message = 'lambda defined as `{}`'.format(inspect.getsource(func).strip())
+                try:
+                    message = 'lambda defined as `{}`'.format(inspect.getsource(func).strip())
+                except IOError as ioerror:
+                    # We are probably in interactive python shell or debugger,
+                    # we cannot get source of the lambda.
+                    message = ("lambda (Couldn't get it's source code."
+                               "Perhaps it is defined in interactive shell.)").format(ioerror)
             else:
                 message = "function %s()" % func.__name__
     return f_code, line_no, filename, message
