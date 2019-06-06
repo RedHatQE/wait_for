@@ -155,6 +155,7 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
 
     t_delta = 0
     tries = 0
+    out = None
     if not very_quiet:
         logger.debug('Started {} at {}'.format(message, st_time))
     while t_delta <= num_sec:
@@ -200,6 +201,7 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
         logger.warning("Could not do {} at {}:{} in time ({} tries) but ignoring".format(message,
             filename, line_no, tries))
         logger.warning('The last result of the call was: {}'.format(out))
+        return WaitForResult(out, num_sec)
 
 
 def wait_for_decorator(*args, **kwargs):

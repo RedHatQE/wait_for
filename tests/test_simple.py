@@ -38,6 +38,17 @@ def test_lambda_wait():
     assert tc < 2, "Should take less than 2 seconds"
 
 
+def test_lambda_wait_silent_fail():
+    incman = Incrementor()
+    ec, tc = wait_for(lambda self: self.i_sleep_a_lot() > 100,
+                      [incman],
+                      delay=.05,
+                      num_sec=1,
+                      silent_failure=True)
+    print("Function output {} in time {} ".format(ec, tc))
+    assert tc == 1, "Should be num_sec"
+
+
 def test_lambda_long_wait():
     incman = Incrementor()
     with pytest.raises(TimedOutError):
