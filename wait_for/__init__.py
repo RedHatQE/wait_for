@@ -127,6 +127,8 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
         quiet: Do not write time report to the log (default False)
         very_quiet: Do not log unless there was an error (default False). Implies quiet.
         silent_failure: Even if the entire attempt times out, don't throw a exception.
+        log_on_loop: Fire off a log.info message indicating we're still waiting at each
+            iteration of the wait loop
     Returns:
         A tuple containing the output from func() and a float detailing the total wait time.
     Raises:
@@ -152,15 +154,18 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
     very_quiet = kwargs.get("very_quiet", False)
     quiet = kwargs.get("quiet", False) or very_quiet
     silent_fail = kwargs.get("silent_failure", False)
+    log_on_loop = kwargs.get("log_on_loop", False)
 
     t_delta = 0
     tries = 0
     out = None
     if not very_quiet:
-        logger.debug('Started {} at {}'.format(message, st_time))
+        logger.debug("Started '{}' at {}".format(message, st_time))
     while t_delta <= num_sec:
+        tries += 1
+        if log_on_loop:
+            logger.info("{} -- try {}".format(message, tries))
         try:
-            tries += 1
             out = func(*func_args, **func_kwargs)
         except Exception as e:
             logger.info("wait_for hit an exception: {}: {}".format(type(e).__name__, e))
@@ -170,7 +175,7 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
                             "as handle_exception is set to True")
             else:
                 logger.info(
-                    "Wait for {} took {} tries and {} seconds "
+                    "'{}' took {} tries and {} seconds "
                     "before failure from an exception.".format(
                         message, tries, time.time() - st_time))
                 raise
@@ -184,21 +189,24 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
         else:
             duration = time.time() - st_time
             if not quiet:
-                logger.debug('Took {:0.2f} to do {}'.format(duration, message))
+                logger.debug("Took {:0.2f} to do '{}'".format(duration, message))
             if not very_quiet:
                 logger.debug(
-                    'Finished {} at {}, {} tries'.format(message, st_time + t_delta, tries))
+                    "Finished '{}' at {}, {} tries".format(message, st_time + t_delta, tries))
             return WaitForResult(out, duration)
         t_delta = time.time() - st_time
     if not very_quiet:
-        logger.debug('Finished at {}'.format(st_time + t_delta))
+        logger.debug("Finished '{}' at {}".format(message, st_time + t_delta))
     if not silent_fail:
-        logger.error("Couldn't complete {} at {}:{} in time, took {:0.2f}, {} tries".format(message,
-            filename, line_no, t_delta, tries))
+        logger.error(
+            "Couldn't complete '{}' at {}:{} in time, took {:0.2f}, {} tries".format(
+                message, filename, line_no, t_delta, tries
+            )
+        )
         logger.error('The last result of the call was: {}'.format(out))
-        raise TimedOutError("Could not do {} at {}:{} in time".format(message, filename, line_no))
+        raise TimedOutError("Could not do '{}' at {}:{} in time".format(message, filename, line_no))
     else:
-        logger.warning("Could not do {} at {}:{} in time ({} tries) but ignoring".format(message,
+        logger.warning("Could not do '{}' at {}:{} in time ({} tries) but ignoring".format(message,
             filename, line_no, tries))
         logger.warning('The last result of the call was: {}'.format(out))
         return WaitForResult(out, num_sec)
