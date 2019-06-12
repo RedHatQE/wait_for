@@ -19,6 +19,13 @@ default_hidden_logger = logging.getLogger('wait_for.default')
 default_hidden_logger.propagate = False
 default_hidden_logger.addHandler(logging.NullHandler())
 
+try:
+    # Available in 3.3+
+    get_time = time.monotonic
+except AttributeError:
+    # Fall back
+    get_time = time.time
+
 
 def _parse_time(t):
     global calendar
@@ -99,9 +106,14 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
     either linearly in 1 second steps, or exponentially, up to a maximum.
     Returns the output from the function once it completes successfully,
     along with the time taken to complete the command.
+
+    It tries to use :py:func:`time.monotonic`, if it is not present, falls back to
+    :py:func:`time.time`, but it then is not resistant against system time changes.
+
     Note: If using the expo keyword, the returned elapsed time will be inaccurate
         as wait_for does not know the exact time that the function returned
         correctly, only that it returned correctly at last check.
+
     Args:
         func: A function to be run
         func_args: A list of function arguments to be passed to func
@@ -138,7 +150,7 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
     # https://docs.pytest.org/en/latest/example/simple.html#writing-well-integrated-assertion-helpers
     __tracebackhide__ = True
     logger = logger or default_hidden_logger
-    st_time = time.time()
+    st_time = get_time()
     total_time = 0
 
     num_sec = _get_timeout_secs(kwargs)
@@ -177,7 +189,7 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
                 logger.info(
                     "'{}' took {} tries and {} seconds "
                     "before failure from an exception.".format(
-                        message, tries, time.time() - st_time))
+                        message, tries, get_time() - st_time))
                 raise
         if out is fail_condition or fail_condition_check(out):
             time.sleep(delay)
@@ -187,14 +199,14 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
             if fail_func:
                 fail_func()
         else:
-            duration = time.time() - st_time
+            duration = get_time() - st_time
             if not quiet:
                 logger.debug("Took {:0.2f} to do '{}'".format(duration, message))
             if not very_quiet:
                 logger.debug(
                     "Finished '{}' at {}, {} tries".format(message, st_time + t_delta, tries))
             return WaitForResult(out, duration)
-        t_delta = time.time() - st_time
+        t_delta = get_time() - st_time
     if not very_quiet:
         logger.debug("Finished '{}' at {}".format(message, st_time + t_delta))
     if not silent_fail:
