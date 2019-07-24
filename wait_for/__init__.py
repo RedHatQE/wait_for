@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import six
 import time
 import logging
 from collections import namedtuple
@@ -19,12 +18,8 @@ default_hidden_logger = logging.getLogger('wait_for.default')
 default_hidden_logger.propagate = False
 default_hidden_logger.addHandler(logging.NullHandler())
 
-try:
-    # Available in 3.3+
-    get_time = time.monotonic
-except AttributeError:
-    # Fall back
-    get_time = time.time
+# Available in 3.3+
+get_time = time.monotonic
 
 
 def _parse_time(t):
@@ -42,7 +37,7 @@ def _get_timeout_secs(kwargs):
         timeout = kwargs["timeout"]
         if isinstance(timeout, (int, float)):
             num_sec = float(timeout)
-        elif isinstance(timeout, six.string_types):
+        elif isinstance(timeout, str):
             num_sec = _parse_time(timeout)
         elif isinstance(timeout, timedelta):
             num_sec = timeout.total_seconds()
@@ -59,14 +54,14 @@ def is_lambda_function(obj):
 
 def _get_context(func, message=None):
     if isinstance(func, partial):
-        f_code = six.get_function_code(func.func)
+        f_code = func.func.__code__
         line_no = f_code.co_firstlineno
         filename = f_code.co_filename
         if not message:
             params = ", ".join([str(arg) for arg in func.args])
             message = "partial function %s(%s)" % (func.func.__name__, params)
     else:
-        f_code = six.get_function_code(func)
+        f_code = func.__code__
         line_no = f_code.co_firstlineno
         filename = f_code.co_filename
         if not message:
