@@ -172,24 +172,26 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
     tries = 0
     out = None
     if not very_quiet:
-        logger.debug("Started '{}' at {}".format(message, st_time))
+        logger.debug("Started %(message)r at %(time)", {'message': message, 'time': st_time})
     while t_delta <= num_sec:
         tries += 1
         if log_on_loop:
-            logger.info("{} -- try {}".format(message, tries))
+            logger.info("%(message)r -- try %(tries)d", {'message': message, 'tries': tries})
         try:
             out = func(*func_args, **func_kwargs)
         except Exception as e:
-            logger.info("wait_for hit an exception: {}: {}".format(type(e).__name__, e))
+            logger.info(
+                "wait_for hit an exception: %(exc_name)s: %(exc)s",
+                {'exc_name': type(e).__name__, 'exc': e})
             if handle_exception:
                 out = fail_condition
                 logger.info("Call failed with following exception, but continuing "
                             "as handle_exception is set to True")
             else:
                 logger.info(
-                    "'{}' took {} tries and {} seconds "
-                    "before failure from an exception.".format(
-                        message, tries, get_time() - st_time))
+                    "%(message)r took %(tries)d tries and %(time).2f seconds "
+                    "before failure from an exception.",
+                    {'message': message, 'tries': tries, 'time': get_time() - st_time})
                 raise
         if out is fail_condition or fail_condition_check(out):
             time.sleep(delay)
@@ -201,26 +203,39 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
         else:
             duration = get_time() - st_time
             if not quiet:
-                logger.debug("Took {:0.2f} to do '{}'".format(duration, message))
+                logger.debug(
+                    "Took %(time).2f to do %(message)r",
+                    {'time': duration, 'message': message})
             if not very_quiet:
                 logger.debug(
-                    "Finished '{}' at {}, {} tries".format(message, st_time + t_delta, tries))
+                    "Finished %(message)r at %(duration).2f, %(tries)d tries",
+                    {'message': message, 'duration': st_time + t_delta, 'tries': tries})
             return WaitForResult(out, duration)
         t_delta = get_time() - st_time
     if not very_quiet:
-        logger.debug("Finished '{}' at {}".format(message, st_time + t_delta))
+        logger.debug(
+            "Finished %(message)r at %(duration).2f",
+            {'message': message, 'duration': st_time + t_delta})
     if not silent_fail:
         logger.error(
-            "Couldn't complete '{}' at {}:{} in time, took {:0.2f}, {} tries".format(
-                message, filename, line_no, t_delta, tries
-            )
+            ("Couldn't complete %(message)r at %(filename)s:%(lineno)d in time, took %(duration).2f"
+            ", %(tries)d tries"),
+            {
+                'message': message,
+                'filename': filename,
+                'lineno': line_no,
+                'duration': t_delta,
+                'tries': tries
+            }
         )
-        logger.error('The last result of the call was: {}'.format(out))
+        logger.error('The last result of the call was: %(result)r', {'result': out})
         raise TimedOutError("Could not do '{}' at {}:{} in time".format(message, filename, line_no))
     else:
-        logger.warning("Could not do '{}' at {}:{} in time ({} tries) but ignoring".format(message,
-            filename, line_no, tries))
-        logger.warning('The last result of the call was: {}'.format(out))
+        logger.warning(
+            "Could not do %(message)r at %(filename)s:%(lineno)d in time (%(tries)d tries) but "
+            "ignoring",
+            {'message': message, 'filename': filename, 'lineno': line_no, 'tries': tries})
+        logger.warning('The last result of the call was: %(result)r', {'result': out})
         return WaitForResult(out, num_sec)
 
 

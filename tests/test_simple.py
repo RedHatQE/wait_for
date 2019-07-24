@@ -68,7 +68,7 @@ def test_lambda_default_message_from_src(error_logger):
     assert expected_message_content in str(excinfo.value)
 
     # Check we got the lamda code in the error log
-    error_log_messages = [call[0][0] for call in error_logger.call_args_list]
+    error_log_messages = [call[0][0] % call[0][1] for call in error_logger.call_args_list]
     for message in error_log_messages:
         if expected_message_content in message:
             break
