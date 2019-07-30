@@ -1,14 +1,10 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=W0621
+from unittest.mock import patch
 import pytest
 import time
 from functools import partial
 from wait_for import wait_for, wait_for_decorator, TimedOutError
-
-try:
-    from unittest.mock import patch
-except ImportError:
-    from mock import patch
 
 
 class Incrementor():
