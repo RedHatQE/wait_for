@@ -44,7 +44,7 @@ def _get_timeout_secs(kwargs):
         else:
             raise ValueError("Timeout got an unknown value {}".format(timeout))
     else:
-        num_sec = kwargs.get('num_sec', 120)
+        num_sec = float(kwargs.get('num_sec', 120))
     return num_sec
 
 

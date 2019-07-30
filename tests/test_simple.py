@@ -114,3 +114,11 @@ def test_nonnumeric_numsec_timedelta_via_string():
     with pytest.raises(TimedOutError):
         wait_for(func,
                  timeout="2s", delay=1)
+
+
+def test_str_numsec():
+    incman = Incrementor()
+    func = partial(lambda: incman.i_sleep_a_lot() > 10)
+    for value in "2", "1.5":
+        with pytest.raises(TimedOutError):
+            wait_for(func, num_sec=value)
