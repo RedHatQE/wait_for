@@ -167,7 +167,7 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
     tries = 0
     out = None
     if not very_quiet:
-        logger.debug("Started %(message)r at %(time)", {'message': message, 'time': st_time})
+        logger.debug("Started %(message)r at %(time).2f", {'message': message, 'time': st_time})
     while t_delta <= num_sec:
         tries += 1
         if log_on_loop:
