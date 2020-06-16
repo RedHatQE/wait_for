@@ -1,10 +1,20 @@
 dist: xenial
 language: python
 python:
-  - '3.5'
-  - '3.6'
-  - '3.7'
+- '3.5'
+- '3.6'
+- '3.7'
 install: pip install tox-travis
 script: tox
 after_success:
 - coveralls
+deploy:
+  provider: pypi
+  username: mshriver
+  password:
+    secure: rkAp2vVtLyQJLWc0OtJhL/YYbdYKCwUEnx5ABw8YLn2B5RY5wHs65NVHWBoeJFWlTE/v0SCDZNdTqJgcouEtVCUwqWnjEteuhDuhS0XGtbVoGK8vym2soIL6lSGTc6PfMJhKNxT7zht44qKuOpcC7nZP8ccs7qWmD3aOeS1/rz3rVls943Zqnq3il7/tlWulbOSjoxT2iIyaJNcrGesmDpYUrs4OFxTwDvKvUbYVlRZF3H1zku5nv5/KK2xbCloMyKnT8kCdbPl3W7Op5gV4XgFGQ78oBVzr8aoF8tnp/AO6GeWezlbjfJ8UTB5ykZJ3DERCVXMss//zeXyFW/Afu3nb5v7ztK5VWIscHXh4iLHzjzBaHQeOTzKGf3gw9H+daqpyUIgAWSef0hQYhkLvomCVC5fUUY9P7aWixwjAMKB1Dr1muVMc2Gmlxw02r6eYeJgYuKHsUpwWmfWggtCyW3wNf6SJyCi6OpRtFiCJ2JWGX58PESmPbf9pCwfLv1W0221OhKVovscxnGsS1EiG5E/RVJpqDUxJREM/CY71zheynVCP5fAVUiYfAQEOaaJIK23nU4IDAOLy8uyoAut+oyRzmHzl+Jh/G8iCx1PTiRRt77ybBE3WxYWVnXIuayQ0XY4Sn4Uw3XYvbyVt381KDvqwAcajhCQ2qMWz6gMeWXs=
+  skip_existing: true
+  distributions: sdist bdist_wheel
+  on:
+    tags: true
+    repo: RedHatQE/wait_for
