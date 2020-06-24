@@ -53,29 +53,27 @@ def is_lambda_function(obj):
 
 
 def _get_context(func, message=None):
-    if isinstance(func, partial):
-        f_code = func.func.__code__
-        line_no = f_code.co_firstlineno
-        filename = f_code.co_filename
-        if not message:
+    if not message:
+        if isinstance(func, partial):
             params = ", ".join([str(arg) for arg in func.args])
-            message = "partial function %s(%s)" % (func.func.__name__, params)
+            message = "partial function {}({})".format(func.func.__name__, params)
+        elif is_lambda_function(func):
+            try:
+                message = "lambda defined as `{}`".format(inspect.getsource(func).strip())
+            except IOError:
+                # Probably in interactive python shell or debugger and cannot get lambda source
+                message = "lambda (source code unknown, perhaps defined in interactive shell)"
+        else:
+            message = "function {}()".format(func.__name__)
+
+    func_obj = func.func if isinstance(func, partial) else func
+    if hasattr(func_obj, '__code__'):
+        line_no = func_obj.__code__.co_firstlineno
+        filename = func_obj.__code__.co_filename
     else:
-        f_code = func.__code__
-        line_no = f_code.co_firstlineno
-        filename = f_code.co_filename
-        if not message:
-            if is_lambda_function(func):
-                try:
-                    message = 'lambda defined as `{}`'.format(inspect.getsource(func).strip())
-                except IOError as ioerror:
-                    # We are probably in interactive python shell or debugger,
-                    # we cannot get source of the lambda.
-                    message = ("lambda (Couldn't get it's source code."
-                               "Perhaps it is defined in interactive shell: {})").format(ioerror)
-            else:
-                message = "function %s()" % func.__name__
-    return f_code, line_no, filename, message
+        line_no = None
+        filename = None
+    return line_no, filename, message
 
 
 def check_result_in_fail_condition(fail_condition, result):
@@ -151,7 +149,7 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
     num_sec = _get_timeout_secs(kwargs)
     expo = kwargs.get('expo', False)
 
-    f_code, line_no, filename, message = _get_context(func, kwargs.get('message', None))
+    line_no, filename, message = _get_context(func, kwargs.get('message', None))
 
     fail_condition = kwargs.get('fail_condition', False)
     fail_condition_check = _get_failcondition_check(fail_condition)
@@ -211,25 +209,34 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
         logger.debug(
             "Finished %(message)r at %(duration).2f",
             {'message': message, 'duration': st_time + t_delta})
-    if not silent_fail:
-        logger.error(
-            ("Couldn't complete %(message)r at %(filename)s:%(lineno)d in time, took %(duration).2f"
-            ", %(tries)d tries"),
-            {
-                'message': message,
-                'filename': filename,
-                'lineno': line_no,
-                'duration': t_delta,
-                'tries': tries
-            }
-        )
-        logger.error('The last result of the call was: %(result)r', {'result': out})
-        raise TimedOutError("Could not do '{}' at {}:{} in time".format(message, filename, line_no))
+
+    if filename and line_no:
+        logger_fmt = ("Couldn't complete %(message)r at %(filename)s:%(line_no)d in time,"
+            " took %(duration).2f, %(tries)d tries")
+        logger_dict = {
+            'message': message,
+            'filename': filename,
+            'line_no': line_no,
+            'duration': t_delta,
+            'tries': tries
+        }
+        timeout_msg = "Could not do '{}' at {}:{} in time".format(message, filename, line_no)
     else:
-        logger.warning(
-            "Could not do %(message)r at %(filename)s:%(lineno)d in time (%(tries)d tries) but "
-            "ignoring",
-            {'message': message, 'filename': filename, 'lineno': line_no, 'tries': tries})
+        logger_fmt = ("Couldn't complete %(message)r in time,"
+            " took %(duration).2f, %(tries)d tries")
+        logger_dict = {
+            'message': message,
+            'duration': t_delta,
+            'tries': tries
+        }
+        timeout_msg = "Could not do '{}' in time".format(message)
+
+    if not silent_fail:
+        logger.error(logger_fmt, logger_dict)
+        logger.error('The last result of the call was: %(result)r', {'result': out})
+        raise TimedOutError(timeout_msg)
+    else:
+        logger.warning("{} but ignoring".format(logger_fmt), logger_dict)
         logger.warning('The last result of the call was: %(result)r', {'result': out})
         return WaitForResult(out, num_sec)
 
