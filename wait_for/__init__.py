@@ -1,12 +1,11 @@
-# -*- coding: utf-8 -*-
-import time
+import inspect
 import logging
+import time
 from collections import namedtuple
 from datetime import datetime, timedelta
 from functools import partial
 from threading import Timer
 from types import LambdaType
-import inspect
 
 import parsedatetime
 
@@ -17,9 +16,6 @@ calendar = parsedatetime.Calendar()
 default_hidden_logger = logging.getLogger('wait_for.default')
 default_hidden_logger.propagate = False
 default_hidden_logger.addHandler(logging.NullHandler())
-
-# Available in 3.3+
-get_time = time.monotonic
 
 
 def _parse_time(t):
@@ -143,7 +139,7 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
     # https://docs.pytest.org/en/latest/example/simple.html#writing-well-integrated-assertion-helpers
     __tracebackhide__ = True
     logger = logger or default_hidden_logger
-    st_time = get_time()
+    st_time = time.monotonic()
     total_time = 0
 
     num_sec = _get_timeout_secs(kwargs)
@@ -187,7 +183,7 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
                 logger.info(
                     "%(message)r took %(tries)d tries and %(time).2f seconds "
                     "before failure from an exception.",
-                    {'message': message, 'tries': tries, 'time': get_time() - st_time})
+                    {'message': message, 'tries': tries, 'time': time.monotonic() - st_time})
                 raise
         if out is fail_condition or fail_condition_check(out):
             time.sleep(delay)
@@ -197,7 +193,7 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
             if fail_func:
                 fail_func()
         else:
-            duration = get_time() - st_time
+            duration = time.monotonic() - st_time
             if not quiet:
                 logger.debug(
                     "Took %(time).2f to do %(message)r",
@@ -207,7 +203,7 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
                     "Finished %(message)r at %(duration).2f, %(tries)d tries",
                     {'message': message, 'duration': st_time + t_delta, 'tries': tries})
             return WaitForResult(out, duration)
-        t_delta = get_time() - st_time
+        t_delta = time.monotonic() - st_time
     if not very_quiet:
         logger.debug(
             "Finished %(message)r at %(duration).2f",

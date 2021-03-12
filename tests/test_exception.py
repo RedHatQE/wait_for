@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import pytest
 
 from wait_for import wait_for, TimedOutError

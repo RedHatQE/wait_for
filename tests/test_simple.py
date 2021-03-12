@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-# pylint: disable=W0621
 from unittest.mock import patch
 import pytest
 import time
