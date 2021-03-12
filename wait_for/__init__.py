@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from functools import partial
 from threading import Timer
 from types import LambdaType
+from typing import Iterable, Union, Type
 
 import parsedatetime
 
@@ -89,6 +90,32 @@ def _get_failcondition_check(fail_condition):
         return partial(check_result_is_fail_condition, fail_condition)
 
 
+def _is_exception_type(obj):
+    return isinstance(obj, type) and issubclass(obj, Exception)
+
+
+def _get_handled_exceptions(
+        handle: Union[Type[Exception], Iterable[Type[Exception]]]
+) -> Iterable[Type[Exception]]:
+    if _is_exception_type(handle):
+        return iter((handle,))
+    else:
+        if isinstance(handle, Iterable):
+            return iter(item if _is_exception_type(item) else Exception for item in handle)
+        else:
+            return iter((Exception,))
+
+
+def _check_must_be_handled(
+        exception: Exception, handle: Union[Type[Exception], Iterable[Type[Exception]]]
+) -> bool:
+    return handle and any(
+        exc_type for exc_type
+        in _get_handled_exceptions(handle)
+        if isinstance(exception, exc_type)
+    )
+
+
 def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
     """Waits for a certain amount of time for an action to complete
     Designed to wait for a certain length of time,
@@ -104,38 +131,46 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
         correctly, only that it returned correctly at last check.
 
     Args:
-        func: A function to be run
-        func_args: A list of function arguments to be passed to func
-        func_kwargs: A dict of function keyword arguments to be passed to func
-        num_sec: An int describing the number of seconds to wait before timing out.
-        timeout: Either an int describing the number of seconds to wait before timing out. Or a
-            :py:class:`timedelta` object. Or a string formatted like ``1h 10m 5s``. This then sets
-            the ``num_sec`` variable.
-        expo: A boolean flag toggling exponential delay growth.
-        message: A string containing a description of func's operation. If None,
-            defaults to the function's name.
-        fail_condition: An object describing the failure condition that should be tested
-            against the output of func. If func() == fail_condition, wait_for continues
-            to wait. Can be a callable which takes the result and returns boolean whether to fail.
+        func (callable): A function to be run
+        func_args (Iterable[Any]): A list of function arguments to be passed to func
+        func_kwargs (dict[str, Any]): A dict of function keyword arguments to be passed to func
+        num_sec (int): An int describing the number of seconds to wait before timing out.
+        timeout (Union[int, timedelta, str]): Describes time to wait before timing out.
+            Either an int describing the number of seconds.
+            Or a :py:class:`timedelta` object.
+            Or a string formatted like ``1h 10m 5s``.
+            This then sets the ``num_sec`` variable.
+        expo (Any): A flag toggling exponential delay growth.
+        message (Optional[str]): A description of func's operation. If None, defaults to the
+            function's name.
+        fail_condition (Union[callable, Any, set[Any]]): An object describing the failure
+            condition that should be tested against the output of func.
+            If func() == fail_condition, wait_for continues to wait.
+            Can be a callable which takes the result and returns boolean whether to fail.
             You can also specify it as a  set, that way it checks whether it is present in the
             iterable.
-        handle_exception: A boolean controlling the handling of excepetions during func()
-            invocation. If set to True, in cases where func() results in an exception,
-            clobber the exception and treat it as a fail_condition; If timed out during handling
-            exception TimedOutError would be raised from last handled exception
-        raise_original: A boolean controlling if last original exception would be raised on timeout
-        delay: An integer describing the number of seconds to delay before trying func()
+        handle_exception(Union[Type[Exception], Iterable[Type[Exception]], Any]):
+            A parameter for the handling of exceptions during func() invocation.
+            If set to ``Union[Type[Exception], Iterable[Type[Exception]]`` clobber exception
+            just from listed exceptions and treat it as a fail_condition.
+            If could be casted to True, in cases where func() results in an exception,
+            clobber the exception and treat it as a fail_condition.
+            If timed out during handling exception TimedOutError would be raised from last handled
+            exception.
+        raise_original (bool): Controls if last original exception would be raised on timeout
+        delay (int): An integer describing the number of seconds to delay before trying func()
             again.
-        fail_func: A function to be run after every unsuccessful attempt to run func()
-        quiet: Do not write time report to the log (default False)
-        very_quiet: Do not log unless there was an error (default False). Implies quiet.
-        silent_failure: Even if the entire attempt times out, don't throw a exception.
-        log_on_loop: Fire off a log.info message indicating we're still waiting at each
+        fail_func (callable): A function to be run after every unsuccessful attempt to run func()
+        quiet (Any): Do not write time report to the log (default False)
+        very_quiet (Any): Do not log unless there was an error (default False). Implies quiet.
+        silent_failure (Any): Even if the entire attempt times out, don't throw a exception.
+        log_on_loop (Any): Fire off a log.info message indicating we're still waiting at each
             iteration of the wait loop
     Returns:
-        A tuple containing the output from func() and a float detailing the total wait time.
+        Tuple[Any, float]: Output from func() and total wait time.
     Raises:
-        TimedOutError: If num_sec is exceeded after an unsuccessful func() invocation.
+        TimedOutError: If num_sec is exceeded after an unsuccessful func() invocation and silent
+            failure is not set
     """
     # Hide this call in the detailed traceback
     # https://docs.pytest.org/en/latest/example/simple.html#writing-well-integrated-assertion-helpers
@@ -177,7 +212,7 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
             logger.info(
                 "wait_for hit an exception: %(exc_name)s: %(exc)s",
                 {'exc_name': type(e).__name__, 'exc': e})
-            if handle_exception:
+            if _check_must_be_handled(e, handle_exception):
                 out = fail_condition
                 exc = e
                 logger.info("Call failed with following exception, but continuing "
