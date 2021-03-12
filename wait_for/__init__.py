@@ -121,7 +121,9 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
             iterable.
         handle_exception: A boolean controlling the handling of excepetions during func()
             invocation. If set to True, in cases where func() results in an exception,
-            clobber the exception and treat it as a fail_condition.
+            clobber the exception and treat it as a fail_condition; If timed out during handling
+            exception TimedOutError would be raised from last handled exception
+        raise_original: A boolean controlling if last original exception would be raised on timeout
         delay: An integer describing the number of seconds to delay before trying func()
             again.
         fail_func: A function to be run after every unsuccessful attempt to run func()
@@ -162,6 +164,7 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
     tries = 0
     out = None
     exc = None
+
     if not very_quiet:
         logger.debug("Started %(message)r at %(time).2f", {'message': message, 'time': st_time})
     while t_delta <= num_sec:
@@ -233,9 +236,11 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
     if not silent_fail:
         logger.error(logger_fmt, logger_dict)
         logger.error('The last result of the call was: %(result)r', {'result': out})
+
         if raise_original and exc:
             raise exc
-        raise TimedOutError(timeout_msg)
+        else:
+            raise TimedOutError(timeout_msg) from exc
     else:
         logger.warning("{} but ignoring".format(logger_fmt), logger_dict)
         logger.warning('The last result of the call was: %(result)r', {'result': out})
