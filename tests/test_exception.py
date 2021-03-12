@@ -40,6 +40,20 @@ def test_handle_exception_v3():
         wait_for(raise_my_error, handle_exception=True, num_sec=0.1)
 
 
+def test_handle_exception_raises_TimedOutError_from_occured_exception():
+    """Set ``handle_exception`` to true.
+
+    An exception raised by the waited-upon function should not bubble up, and a
+    ``TimedOutError`` should be raised from function-occurred exception instead.
+    """
+    try:
+        wait_for(raise_my_error, handle_exception=True, num_sec=0.1)
+    except TimedOutError as timeout_exception:
+        assert isinstance(timeout_exception.__cause__, MyError)
+    else:
+        assert False, "Wasn't raised"
+
+
 def test_handle_exception_silent_failure_v1():
     """Set both ``handle_exception`` and ``silent_failure`` to true.
 
