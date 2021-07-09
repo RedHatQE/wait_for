@@ -160,10 +160,12 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
     quiet = kwargs.get("quiet", False) or very_quiet
     silent_fail = kwargs.get("silent_failure", False)
     log_on_loop = kwargs.get("log_on_loop", False)
+    raise_original = kwargs.get("raise_original", False)
 
     t_delta = 0
     tries = 0
     out = None
+    exc = None
     if not very_quiet:
         logger.debug("Started %(message)r at %(time).2f", {'message': message, 'time': st_time})
     while t_delta <= num_sec:
@@ -178,6 +180,7 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
                 {'exc_name': type(e).__name__, 'exc': e})
             if handle_exception:
                 out = fail_condition
+                exc = e
                 logger.info("Call failed with following exception, but continuing "
                             "as handle_exception is set to True")
             else:
@@ -234,6 +237,8 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
     if not silent_fail:
         logger.error(logger_fmt, logger_dict)
         logger.error('The last result of the call was: %(result)r', {'result': out})
+        if raise_original and exc:
+            raise exc
         raise TimedOutError(timeout_msg)
     else:
         logger.warning("{} but ignoring".format(logger_fmt), logger_dict)

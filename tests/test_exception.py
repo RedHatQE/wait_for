@@ -50,6 +50,11 @@ def test_handle_exception_silent_failure_v1():
     assert isinstance(num_sec, float)
 
 
+def test_reraise_exception():
+    with pytest.raises(MyError):
+        wait_for(raise_my_error, handle_exception=True, num_sec=0.1, raise_original=True)
+
+
 def _call_handle_exception_silent_failure():
     return wait_for(
         raise_my_error,
