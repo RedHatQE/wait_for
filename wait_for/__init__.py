@@ -9,10 +9,9 @@ from types import LambdaType
 from typing import Iterable, Union, Type
 
 import parsedatetime
-
+calendar = parsedatetime.Calendar()
 WaitForResult = namedtuple("WaitForResult", ["out", "duration"])
 
-calendar = parsedatetime.Calendar()
 
 default_hidden_logger = logging.getLogger('wait_for.default')
 default_hidden_logger.propagate = False
@@ -20,8 +19,6 @@ default_hidden_logger.addHandler(logging.NullHandler())
 
 
 def _parse_time(t):
-    global calendar
-
     parsed, code = calendar.parse(t)
     if code != 2:
         raise ValueError("Could not parse {}!".format(t))
