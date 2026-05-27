@@ -1,68 +1,68 @@
-from unittest.mock import patch
-import pytest
 import time
 from functools import partial
-from wait_for import wait_for, wait_for_decorator, TimedOutError
+from unittest.mock import patch
+
+import pytest
+
+from wait_for import TimedOutError, wait_for, wait_for_decorator
 
 
-class Incrementor():
+class Incrementor:
     value = 0
 
     def i_sleep_a_lot(self):
-        time.sleep(.1)
+        time.sleep(0.1)
         self.value += 1
         return self.value
 
 
 def test_simple_wait():
     incman = Incrementor()
-    ec, tc = wait_for(incman.i_sleep_a_lot,
-                      fail_condition=0,
-                      delay=.05)
-    print("Function output {} in time {}".format(ec, tc))
+    ec, tc = wait_for(incman.i_sleep_a_lot, fail_condition=0, delay=0.05)
+    print(f"Function output {ec} in time {tc}")
     assert tc < 1, "Should take less than 1 seconds"
 
 
 def test_lambda_wait():
     incman = Incrementor()
-    ec, tc = wait_for(lambda self: self.i_sleep_a_lot() > 10,
-                      [incman],
-                      delay=.05)
-    print("Function output {} in time {}".format(ec, tc))
+    ec, tc = wait_for(lambda self: self.i_sleep_a_lot() > 10, [incman], delay=0.05)
+    print(f"Function output {ec} in time {tc}")
     assert tc < 2, "Should take less than 2 seconds"
 
 
 def test_builtin_wait():
     incman = Incrementor()
     ec, tc = wait_for(bool, [incman], delay=0.5)
-    print("Function output {} in time {}".format(ec, tc))
+    print(f"Function output {ec} in time {tc}")
     assert tc < 2, "Should take less than 2 seconds"
 
 
 def test_lambda_wait_silent_fail():
     incman = Incrementor()
-    ec, tc = wait_for(lambda self: self.i_sleep_a_lot() > 100,
-                      [incman],
-                      delay=.05,
-                      num_sec=1,
-                      silent_failure=True)
-    print("Function output {} in time {}".format(ec, tc))
+    ec, tc = wait_for(
+        lambda self: self.i_sleep_a_lot() > 100,
+        [incman],
+        delay=0.05,
+        num_sec=1,
+        silent_failure=True,
+    )
+    print(f"Function output {ec} in time {tc}")
     assert tc == 1, "Should be num_sec"
 
 
 def test_lambda_long_wait():
     incman = Incrementor()
     with pytest.raises(TimedOutError):
-        wait_for(lambda self: self.i_sleep_a_lot() > 10, [incman],
-                 num_sec=1, message="lambda_long_wait")
+        wait_for(
+            lambda self: self.i_sleep_a_lot() > 10, [incman], num_sec=1, message="lambda_long_wait"
+        )
 
 
-@patch('wait_for.default_hidden_logger.error')
+@patch("wait_for.default_hidden_logger.error")
 def test_lambda_default_message_from_src(error_logger):
     incman = Incrementor()
     with pytest.raises(TimedOutError) as excinfo:
-        wait_for(lambda self: self.i_sleep_a_lot() > 10, [incman],
-                 num_sec=1)
+        wait_for(lambda self: self.i_sleep_a_lot() > 10, [incman], num_sec=1)
 
     # Check we got the lamda code in the TimedOutError
     expected_message_content = "lambda self: self.i_sleep_a_lot() > 10"
@@ -81,25 +81,23 @@ def test_partial():
     incman = Incrementor()
     func = partial(lambda: incman.i_sleep_a_lot() > 10)
     with pytest.raises(TimedOutError):
-        wait_for(func,
-                 num_sec=2, delay=1)
+        wait_for(func, num_sec=2, delay=1)
 
 
 def test_callable_fail_condition():
     incman = Incrementor()
     with pytest.raises(TimedOutError):
-        wait_for(
-            incman.i_sleep_a_lot,
-            fail_condition=lambda value: value <= 10, num_sec=2, delay=1)
+        wait_for(incman.i_sleep_a_lot, fail_condition=lambda value: value <= 10, num_sec=2, delay=1)
 
 
 def test_wait_decorator():
     incman = Incrementor()
 
-    @wait_for_decorator(fail_condition=0, delay=.05)
+    @wait_for_decorator(fail_condition=0, delay=0.05)
     def a_test():
         incman.i_sleep_a_lot()
-    print("Function output {} in time {}".format(a_test.out, a_test.duration))
+
+    print(f"Function output {a_test.out} in time {a_test.duration}")
     assert a_test.duration < 1, "Should take less than 1 seconds"
 
 
@@ -109,7 +107,8 @@ def test_wait_decorator_noparams():
     @wait_for_decorator()
     def a_test():
         return incman.i_sleep_a_lot() != 0
-    print("Function output {} in time {}".format(a_test.out, a_test.duration))
+
+    print(f"Function output {a_test.out} in time {a_test.duration}")
     assert a_test.duration < 1, "Should take less than 1 seconds"
 
 
@@ -117,8 +116,7 @@ def test_nonnumeric_numsec_timedelta_via_string():
     incman = Incrementor()
     func = partial(lambda: incman.i_sleep_a_lot() > 10)
     with pytest.raises(TimedOutError):
-        wait_for(func,
-                 timeout="2s", delay=1)
+        wait_for(func, timeout="2s", delay=1)
 
 
 def test_str_numsec():
