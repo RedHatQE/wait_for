@@ -1,0 +1,69 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "wait_for"
+description = "A waiting based utility with decorator and logger support"
+readme = "README.rst"
+license = { text = "Apache-2.0" }
+authors = [
+    { name = "Peter Savage", email = "psavage@redhat.com" },
+]
+keywords = ["setup", "distutils"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Utilities",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "parsedatetime>=2.5",
+]
+dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://github.com/RedHatQE/wait_for"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.targets.wheel]
+packages = ["wait_for"]
+
+[tool.hatch.envs.default]
+dependencies = [
+    "pytest",
+    "pytest-cov",
+    "coveralls",
+]
+
+[tool.hatch.envs.default.scripts]
+test = "pytest {args:tests/ -v}"
+cov = "pytest {args:tests/ -v --cov wait_for}"
+
+[[tool.hatch.envs.default.matrix]]
+python = ["3.10", "3.11", "3.12", "3.13"]
+
+[tool.hatch.envs.lint]
+detached = true
+dependencies = [
+    "flake8",
+]
+
+[tool.hatch.envs.lint.scripts]
+check = "flake8 {args:wait_for tests}"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.flake8]
+max_line_length = 100
+ignore = ["E128", "E811"]
