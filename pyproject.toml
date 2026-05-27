@@ -42,6 +42,7 @@ source = "vcs"
 
 [tool.hatch.build.targets.wheel]
 packages = ["wait_for"]
+include = ["wait_for/py.typed"]
 
 [tool.hatch.envs.default]
 dependencies = [
@@ -51,7 +52,7 @@ dependencies = [
 
 [tool.hatch.envs.default.scripts]
 test = "pytest {args:tests/ -v}"
-cov = "pytest {args:tests/ -v --cov wait_for --cov-report=xml}"
+cov = "pytest {args:tests/ -v --cov wait_for --cov-report=xml --cov-fail-under=98}"
 
 [[tool.hatch.envs.default.matrix]]
 python = ["3.10", "3.11", "3.12", "3.13", "3.14"]
@@ -64,3 +65,14 @@ line-length = 100
 
 [tool.ruff.lint]
 extend-select = ["F", "I", "UP", "RUF"]
+
+[tool.mypy]
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+
+exclude = ["tests/"]
+
+[[tool.mypy.overrides]]
+module = "parsedatetime"
+ignore_missing_imports = true

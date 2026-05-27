@@ -123,7 +123,7 @@ exception handling are **not** suppressed by ``very_quiet``.
 
 ``silent_failure`` *(bool)* -- When ``True``, a timeout does **not** raise
 ``TimedOutError``. Instead, a ``WaitForResult`` is returned with the last
-``func()`` output and ``num_sec`` as the duration. Default: ``False``.
+``func()`` output and the elapsed time at timeout. Default: ``False``.
 
 ``log_on_loop`` *(bool)* -- Emit a ``logger.info`` message at each iteration of the
 wait loop, indicating the attempt number. Default: ``False``. This message is emitted
@@ -131,7 +131,7 @@ regardless of the ``quiet`` or ``very_quiet`` flags.
 
 **Returns:**
 
-A ``WaitForResult`` namedtuple (see below).
+A ``WaitForResult`` named tuple (see below).
 
 **Raises:**
 
@@ -142,18 +142,20 @@ A ``WaitForResult`` namedtuple (see below).
 ``WaitForResult``
 ~~~~~~~~~~~~~~~~~
 
-A ``namedtuple`` returned by ``wait_for`` and ``wait_for_decorator``.
+A ``typing.NamedTuple`` subclass returned by ``wait_for`` and ``wait_for_decorator``.
 
 .. code-block:: python
 
-   from wait_for import WaitForResult
+   from typing import Any, NamedTuple
 
-   WaitForResult = namedtuple("WaitForResult", ["out", "duration"])
+   class WaitForResult(NamedTuple):
+       out: Any
+       duration: float
 
-``out`` -- The return value from the waited-on function.
+``out`` *(Any)* -- The return value from the waited-on function.
 
-``duration`` *(float)* -- Wall-clock seconds elapsed from the start of waiting to
-the successful return.
+``duration`` *(float)* -- Wall-clock seconds elapsed from the start of waiting until
+``func()`` succeeded, or until the timeout was reached when ``silent_failure=True``.
 
 
 ``wait_for_decorator``
@@ -215,10 +217,9 @@ defaults to an internal method that sets a boolean flag.
 
 **Methods:**
 
-- ``start()`` -- Start a new background timer thread. Note: any previously started timer
-  that has not yet fired is **not** cancelled; calling ``start()`` or ``reset()`` before
-  the prior timer expires will result in multiple timers pending simultaneously.
-- ``reset()`` -- Reset the fired flag and call ``start()`` to add a new timer thread.
+- ``start()`` -- Cancel any previously scheduled timer and start a new background daemon
+  thread. Safe to call multiple times; only one pending timer will be active at a time.
+- ``reset()`` -- Reset the fired flag and call ``start()`` to schedule a fresh timer.
 - ``is_it_time()`` -- Returns ``True`` if the timer has fired since the last reset.
 
 **Example:**

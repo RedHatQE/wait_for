@@ -30,4 +30,3 @@ jobs:
         with:
           files: coverage.xml
           flags: python-${{ matrix.python-version }}
-          fail_ci_if_error: false
