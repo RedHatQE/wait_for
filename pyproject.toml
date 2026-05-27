@@ -10,6 +10,10 @@ license = { text = "Apache-2.0" }
 authors = [
     { name = "Peter Savage", email = "psavage@redhat.com" },
 ]
+maintainers = [
+    { name = "Mike Shriver", email = "mshriver@redhat.com" },
+    { name = "Ronny Pfannschmidt", email = "opensource@ronnypfannschmidt.de" },
+]
 keywords = ["setup", "distutils"]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -21,6 +25,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Utilities",
 ]
 requires-python = ">=3.10"
@@ -50,20 +55,13 @@ test = "pytest {args:tests/ -v}"
 cov = "pytest {args:tests/ -v --cov wait_for}"
 
 [[tool.hatch.envs.default.matrix]]
-python = ["3.10", "3.11", "3.12", "3.13"]
-
-[tool.hatch.envs.lint]
-detached = true
-dependencies = [
-    "flake8",
-]
-
-[tool.hatch.envs.lint.scripts]
-check = "flake8 {args:wait_for tests}"
+python = ["3.10", "3.11", "3.12", "3.13", "3.14"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
-[tool.flake8]
-max_line_length = 100
-ignore = ["E128", "E811"]
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+extend-select = ["F", "I", "UP", "RUF"]
