@@ -47,12 +47,11 @@ packages = ["wait_for"]
 dependencies = [
     "pytest",
     "pytest-cov",
-    "coveralls",
 ]
 
 [tool.hatch.envs.default.scripts]
 test = "pytest {args:tests/ -v}"
-cov = "pytest {args:tests/ -v --cov wait_for}"
+cov = "pytest {args:tests/ -v --cov wait_for --cov-report=xml}"
 
 [[tool.hatch.envs.default.matrix]]
 python = ["3.10", "3.11", "3.12", "3.13", "3.14"]
