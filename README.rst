@@ -112,17 +112,22 @@ exception handling during ``func()`` invocation.
 ``fail_func`` *(callable | None)* -- A callback invoked after every failed attempt
 (after sleeping). Useful for cleanup or logging side-effects. Default: ``None``.
 
-``quiet`` *(bool)* -- Suppress the per-success timing log message. Default: ``False``.
+``quiet`` *(bool)* -- Suppress the ``"Took X to do Y"`` debug log emitted on a successful
+return. Default: ``False``. Note: the secondary ``"Finished ..."`` debug message emitted
+on success is only suppressed by ``very_quiet``, not by ``quiet`` alone.
 
-``very_quiet`` *(bool)* -- Suppress all log messages except errors. Implies ``quiet``.
-Default: ``False``.
+``very_quiet`` *(bool)* -- Suppress the ``"Started ..."`` debug log at entry and both
+``"Finished ..."`` debug logs (on success and on timeout expiry). Implies ``quiet``.
+Default: ``False``. Note: ``logger.info`` messages produced by ``log_on_loop`` and by
+exception handling are **not** suppressed by ``very_quiet``.
 
 ``silent_failure`` *(bool)* -- When ``True``, a timeout does **not** raise
 ``TimedOutError``. Instead, a ``WaitForResult`` is returned with the last
 ``func()`` output and ``num_sec`` as the duration. Default: ``False``.
 
 ``log_on_loop`` *(bool)* -- Emit a ``logger.info`` message at each iteration of the
-wait loop, indicating the attempt number. Default: ``False``.
+wait loop, indicating the attempt number. Default: ``False``. This message is emitted
+regardless of the ``quiet`` or ``very_quiet`` flags.
 
 **Returns:**
 
@@ -210,8 +215,10 @@ defaults to an internal method that sets a boolean flag.
 
 **Methods:**
 
-- ``start()`` -- Start (or restart) the background timer thread.
-- ``reset()`` -- Reset the flag and restart the timer.
+- ``start()`` -- Start a new background timer thread. Note: any previously started timer
+  that has not yet fired is **not** cancelled; calling ``start()`` or ``reset()`` before
+  the prior timer expires will result in multiple timers pending simultaneously.
+- ``reset()`` -- Reset the fired flag and call ``start()`` to add a new timer thread.
 - ``is_it_time()`` -- Returns ``True`` if the timer has fired since the last reset.
 
 **Example:**
