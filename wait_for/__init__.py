@@ -9,10 +9,9 @@ from types import LambdaType
 from typing import Iterable, Union, Type
 
 import parsedatetime
-
+calendar = parsedatetime.Calendar()
 WaitForResult = namedtuple("WaitForResult", ["out", "duration"])
 
-calendar = parsedatetime.Calendar()
 
 default_hidden_logger = logging.getLogger('wait_for.default')
 default_hidden_logger.propagate = False
@@ -20,8 +19,6 @@ default_hidden_logger.addHandler(logging.NullHandler())
 
 
 def _parse_time(t):
-    global calendar
-
     parsed, code = calendar.parse(t)
     if code != 2:
         raise ValueError("Could not parse {}!".format(t))
@@ -161,11 +158,15 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
         delay (int): An integer describing the number of seconds to delay before trying func()
             again.
         fail_func (callable): A function to be run after every unsuccessful attempt to run func()
-        quiet (Any): Do not write time report to the log (default False)
-        very_quiet (Any): Do not log unless there was an error (default False). Implies quiet.
+        quiet (Any): Suppress the "Took X to do Y" debug log emitted on success (default False).
+            Note: the secondary "Finished ..." debug log on success is only suppressed by
+            very_quiet, not quiet alone.
+        very_quiet (Any): Suppress the "Started ..." entry log and both "Finished ..." logs
+            (on success and on timeout). Implies quiet (default False). Note: logger.info
+            messages from log_on_loop and exception handling are not suppressed by very_quiet.
         silent_failure (Any): Even if the entire attempt times out, don't throw a exception.
         log_on_loop (Any): Fire off a log.info message indicating we're still waiting at each
-            iteration of the wait loop
+            iteration of the wait loop. Not suppressed by quiet or very_quiet.
     Returns:
         Tuple[Any, float]: Output from func() and total wait time.
     Raises:
@@ -204,11 +205,13 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
         logger.debug("Started %(message)r at %(time).2f", {'message': message, 'time': st_time})
     while t_delta <= num_sec:
         tries += 1
+        # TODO: log_on_loop info messages are not suppressed by very_quiet
         if log_on_loop:
             logger.info("%(message)r -- try %(tries)d", {'message': message, 'tries': tries})
         try:
             out = func(*func_args, **func_kwargs)
         except Exception as e:
+            # TODO: exception-handling info messages are not suppressed by very_quiet
             logger.info(
                 "wait_for hit an exception: %(exc_name)s: %(exc)s",
                 {'exc_name': type(e).__name__, 'exc': e})
@@ -236,6 +239,8 @@ def wait_for(func, func_args=[], func_kwargs={}, logger=None, **kwargs):
                 logger.debug(
                     "Took %(time).2f to do %(message)r",
                     {'time': duration, 'message': message})
+            # TODO: this second on-success debug message is only suppressed by very_quiet,
+            # not by quiet; it should be suppressed by quiet as well
             if not very_quiet:
                 logger.debug(
                     "Finished %(message)r at %(duration).2f, %(tries)d tries",
@@ -316,7 +321,7 @@ class RefreshTimer(object):
     Initialized with a refresh period, a callback and args. Very similar to the
     actual threading.Timer class, when no callback function is passed, reverts to
     even simpler usage of just telling if a certain amount of time has passed.
-    Can be resued.
+    Can be reused.
     """
 
     def __init__(self, time_for_refresh=300, callback=None, *args, **kwargs):
@@ -328,6 +333,9 @@ class RefreshTimer(object):
         self.start()
 
     def start(self):
+        # TODO: store the Timer reference and cancel it here before creating a new one;
+        # without cancellation, calling start() or reset() before the previous timer
+        # expires leaks a live timer thread that will still fire
         t = Timer(self.time_for_refresh, self.callback, self.args, self.kwargs)
         t.start()
 
