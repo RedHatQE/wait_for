@@ -5,5 +5,10 @@ ChangeLog
 *.pyc
 *.egg-info/
 .cache/
-.tox/
 .eggs/
+
+# Coverage
+coverage.xml
+.coverage
+.coverage.*
+htmlcov/
