@@ -186,7 +186,8 @@ def wait_for(
         raise_original (bool): Controls if last original exception would be raised on timeout
         delay (int): An integer describing the number of seconds to delay before trying func()
             again.
-        fail_func (callable): A function to be run after every unsuccessful attempt to run func()
+        fail_func (callable): A function to be run after every unsuccessful attempt to run func(),
+            including when the timeout budget is already exhausted and no sleep occurs.
         quiet (Any): Suppress the "Took X to do Y" debug log emitted on success (default False).
             Note: the secondary "Finished ..." debug log on success is only suppressed by
             very_quiet, not quiet alone.
@@ -268,7 +269,14 @@ def wait_for(
                 )
                 raise
         if out is fail_condition or fail_condition_check(out):
-            time.sleep(delay)
+            t_delta = time.monotonic() - st_time
+            remaining = num_sec - t_delta
+            if remaining <= 0:
+                if fail_func:
+                    fail_func()
+                    t_delta = time.monotonic() - st_time
+                break
+            time.sleep(min(delay, remaining))
             if expo:
                 delay *= 2
             if fail_func:
