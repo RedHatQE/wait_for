@@ -268,7 +268,11 @@ def wait_for(
                 )
                 raise
         if out is fail_condition or fail_condition_check(out):
-            time.sleep(delay)
+            t_delta = time.monotonic() - st_time
+            remaining = num_sec - t_delta
+            if remaining <= 0:
+                break
+            time.sleep(min(delay, remaining))
             if expo:
                 delay *= 2
             if fail_func:

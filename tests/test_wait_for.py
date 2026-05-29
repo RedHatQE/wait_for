@@ -380,3 +380,48 @@ def test_wait_for_result_unpacking() -> None:
     out, duration = wait_for(_always_true, num_sec=1)
     assert out is True
     assert isinstance(duration, float)
+
+
+# ---------------------------------------------------------------------------
+# Sleep overshoot capping
+# ---------------------------------------------------------------------------
+
+
+def test_expo_sleep_does_not_overshoot_timeout() -> None:
+    """With ``expo=True``, elapsed time must not significantly exceed ``num_sec``.
+
+    The exponential delay doubles each iteration and can grow well past the
+    remaining time budget.  The wait loop should cap each sleep to the time
+    left so the total wall-clock duration stays close to ``num_sec``.
+    """
+    num_sec = 2.0
+    tolerance = 0.5
+    _, duration = wait_for(
+        _always_false,
+        expo=True,
+        delay=0.1,
+        num_sec=num_sec,
+        silent_failure=True,
+    )
+    assert duration <= num_sec + tolerance, (
+        f"Expected <= {num_sec + tolerance}s, but waited {duration:.2f}s"
+    )
+
+
+def test_large_fixed_delay_does_not_overshoot_timeout() -> None:
+    """A fixed ``delay`` larger than ``num_sec`` must not cause a long overshoot.
+
+    When delay exceeds the remaining budget, the sleep should be capped so
+    the total elapsed time stays close to ``num_sec``.
+    """
+    num_sec = 0.5
+    tolerance = 0.5
+    _, duration = wait_for(
+        _always_false,
+        delay=10,
+        num_sec=num_sec,
+        silent_failure=True,
+    )
+    assert duration <= num_sec + tolerance, (
+        f"Expected <= {num_sec + tolerance}s, but waited {duration:.2f}s"
+    )
