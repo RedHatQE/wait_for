@@ -109,8 +109,9 @@ exception handling during ``func()`` invocation.
 ``handle_exception`` is active, re-raises the last original exception instead of
 ``TimedOutError``. Default: ``False``.
 
-``fail_func`` *(callable | None)* -- A callback invoked after every failed attempt
-(after sleeping). Useful for cleanup or logging side-effects. Default: ``None``.
+``fail_func`` *(callable | None)* -- A callback invoked after every failed attempt,
+including when the timeout budget is already exhausted and no sleep occurs.
+Useful for cleanup or logging side-effects. Default: ``None``.
 
 ``quiet`` *(bool)* -- Suppress the ``"Took X to do Y"`` debug log emitted on a successful
 return. Default: ``False``. Note: the secondary ``"Finished ..."`` debug message emitted

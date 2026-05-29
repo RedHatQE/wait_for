@@ -223,6 +223,24 @@ def test_fail_func() -> None:
     assert fail_func.call_count >= 1
 
 
+def test_fail_func_called_when_func_exhausts_timeout() -> None:
+    """``fail_func`` is invoked even when ``func()`` itself consumes the timeout budget.
+
+    The ``remaining <= 0`` early-exit branch must call ``fail_func`` before
+    breaking, preserving the same callback behavior the original loop had
+    (which had no early break and always reached ``fail_func``).
+    """
+    fail_func = MagicMock()
+
+    def slow_fail() -> bool:
+        time.sleep(0.3)
+        return False
+
+    with pytest.raises(TimedOutError):
+        wait_for(slow_fail, fail_func=fail_func, num_sec=0.1, delay=0)
+    assert fail_func.call_count == 1
+
+
 # ---------------------------------------------------------------------------
 # Error and message reporting
 # ---------------------------------------------------------------------------
