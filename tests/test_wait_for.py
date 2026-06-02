@@ -2,7 +2,7 @@
 
 Organised by concept:
 - Function type variants (method, lambda, builtin, partial)
-- timeout / num_sec parameter variants
+- timeout parameter variants
 - fail_condition variants (default, callable, set)
 - Optional parameters (silent_failure, log_on_loop, expo, fail_func)
 - Error and message reporting
@@ -57,7 +57,7 @@ def _always_true() -> bool:
 def test_method_as_func() -> None:
     """A regular bound method is accepted as the waited-upon function."""
     incman = Incrementor()
-    out, elapsed = wait_for(incman.increment_with_sleep, fail_condition=0, delay=0.05, num_sec=2)
+    out, elapsed = wait_for(incman.increment_with_sleep, fail_condition=0, delay=0.05, timeout=2)
     assert out == 1
     assert elapsed < 1
 
@@ -66,7 +66,7 @@ def test_lambda_as_func() -> None:
     """A lambda expression is accepted as the waited-upon function."""
     incman = Incrementor()
     out, elapsed = wait_for(
-        lambda self: self.increment_with_sleep() > 10, [incman], delay=0.05, num_sec=5
+        lambda self: self.increment_with_sleep() > 10, [incman], delay=0.05, timeout=5
     )
     assert out is True
     assert elapsed < 2
@@ -75,21 +75,21 @@ def test_lambda_as_func() -> None:
 def test_builtin_as_func() -> None:
     """A C builtin (bool) is accepted as the waited-upon function."""
     incman = Incrementor()
-    out, elapsed = wait_for(bool, [incman], delay=0.5, num_sec=2)
+    out, elapsed = wait_for(bool, [incman], delay=0.5, timeout=2)
     assert out is True
     assert elapsed < 2
 
 
 def test_callable_object_as_func() -> None:
     """A callable object (instance with __call__) is accepted as the waited-upon function."""
-    result = wait_for(CallableObject(), num_sec=1)
+    result = wait_for(CallableObject(), timeout=1)
     assert result.out is True
 
 
 def test_callable_object_in_partial() -> None:
     """A functools.partial wrapping a callable object works without AttributeError."""
     func = partial(CallableObject())
-    result = wait_for(func, num_sec=1)
+    result = wait_for(func, timeout=1)
     assert result.out is True
 
 
@@ -98,11 +98,11 @@ def test_partial_as_func() -> None:
     incman = Incrementor()
     func = partial(lambda: incman.increment_with_sleep() > 10)
     with pytest.raises(TimedOutError):
-        wait_for(func, num_sec=2, delay=1)
+        wait_for(func, timeout=2, delay=1)
 
 
 # ---------------------------------------------------------------------------
-# timeout / num_sec parameter variants
+# timeout parameter variants
 # ---------------------------------------------------------------------------
 
 
@@ -118,14 +118,6 @@ def test_timeout_as_float() -> None:
     assert result.out is True
 
 
-def test_timeout_as_string() -> None:
-    """``timeout`` accepts a human-readable duration string (e.g. '2s')."""
-    incman = Incrementor()
-    func = partial(lambda: incman.increment_with_sleep() > 10)
-    with pytest.raises(TimedOutError):
-        wait_for(func, timeout="2s", delay=1)
-
-
 def test_timeout_as_timedelta() -> None:
     """``timeout`` accepts a :class:`datetime.timedelta`."""
     with pytest.raises(TimedOutError):
@@ -136,15 +128,6 @@ def test_timeout_unknown_type_raises() -> None:
     """``timeout`` with an unsupported type raises ``ValueError``."""
     with pytest.raises(ValueError, match="Timeout got an unknown value"):
         wait_for(_always_false, timeout=object())
-
-
-@pytest.mark.parametrize("value", ["2", "1.5"])
-def test_num_sec_as_string(value: str) -> None:
-    """``num_sec`` also accepts a string representation of a number."""
-    incman = Incrementor()
-    func = partial(lambda: incman.increment_with_sleep() > 10)
-    with pytest.raises(TimedOutError):
-        wait_for(func, num_sec=value)
 
 
 # ---------------------------------------------------------------------------
@@ -159,7 +142,7 @@ def test_callable_fail_condition() -> None:
         wait_for(
             incman.increment_with_sleep,
             fail_condition=lambda value: value <= 10,
-            num_sec=2,
+            timeout=2,
             delay=1,
         )
 
@@ -172,14 +155,14 @@ def test_set_fail_condition_success() -> None:
         counter[0] += 1
         return counter[0]
 
-    result = wait_for(increment, fail_condition={0, 1, 2}, delay=0, num_sec=5)
+    result = wait_for(increment, fail_condition={0, 1, 2}, delay=0, timeout=5)
     assert result.out == 3
 
 
 def test_set_fail_condition_timeout() -> None:
     """``fail_condition`` as a set: times out when the result is always in the set."""
     with pytest.raises(TimedOutError):
-        wait_for(_always_false, fail_condition={False}, num_sec=0.1, delay=0.05)
+        wait_for(_always_false, fail_condition={False}, timeout=0.1, delay=0.05)
 
 
 # ---------------------------------------------------------------------------
@@ -194,7 +177,7 @@ def test_silent_failure() -> None:
         lambda self: self.increment_with_sleep() > 100,
         [incman],
         delay=0.05,
-        num_sec=1,
+        timeout=1,
         silent_failure=True,
     )
     assert elapsed >= 1
@@ -204,7 +187,7 @@ def test_silent_failure() -> None:
 def test_log_on_loop() -> None:
     """``log_on_loop=True`` emits an info log on each polling iteration."""
     logger = MagicMock()
-    result = wait_for(_always_true, log_on_loop=True, logger=logger, num_sec=1)
+    result = wait_for(_always_true, log_on_loop=True, logger=logger, timeout=1)
     assert result.out is True
     logger.info.assert_called()
 
@@ -212,14 +195,14 @@ def test_log_on_loop() -> None:
 def test_expo_delay() -> None:
     """``expo=True`` doubles the inter-poll delay after each failed attempt."""
     with pytest.raises(TimedOutError):
-        wait_for(_always_false, expo=True, num_sec=0.15, delay=0.01)
+        wait_for(_always_false, expo=True, timeout=0.15, delay=0.01)
 
 
 def test_fail_func() -> None:
     """``fail_func`` is called after each unsuccessful polling attempt."""
     fail_func = MagicMock()
     with pytest.raises(TimedOutError):
-        wait_for(_always_false, fail_func=fail_func, num_sec=0.15, delay=0.05)
+        wait_for(_always_false, fail_func=fail_func, timeout=0.15, delay=0.05)
     assert fail_func.call_count >= 1
 
 
@@ -237,7 +220,7 @@ def test_fail_func_called_when_func_exhausts_timeout() -> None:
         return False
 
     with pytest.raises(TimedOutError):
-        wait_for(slow_fail, fail_func=fail_func, num_sec=0.1, delay=0)
+        wait_for(slow_fail, fail_func=fail_func, timeout=0.1, delay=0)
     assert fail_func.call_count == 1
 
 
@@ -253,7 +236,7 @@ def test_timeout_raises_timed_out_error() -> None:
         wait_for(
             lambda self: self.increment_with_sleep() > 10,
             [incman],
-            num_sec=1,
+            timeout=1,
             message="never_reached",
         )
 
@@ -263,7 +246,7 @@ def test_lambda_source_code_in_timeout_error(error_logger: MagicMock) -> None:
     """Lambda source code appears in both the ``TimedOutError`` message and the error log."""
     incman = Incrementor()
     with pytest.raises(TimedOutError) as excinfo:
-        wait_for(lambda self: self.increment_with_sleep() > 10, [incman], num_sec=1)
+        wait_for(lambda self: self.increment_with_sleep() > 10, [incman], timeout=1)
 
     expected = "lambda self: self.increment_with_sleep() > 10"
     assert expected in str(excinfo.value)
@@ -284,7 +267,7 @@ def test_builtin_timeout_error_message() -> None:
     exercising the else-branch of the filename/line_no guard in the timeout path.
     """
     with pytest.raises(TimedOutError) as exc_info:
-        wait_for(bool, [[]], num_sec=0.05, delay=0.01)
+        wait_for(bool, [[]], timeout=0.05, delay=0.01)
     assert "Could not do" in str(exc_info.value)
 
 
@@ -297,7 +280,7 @@ def test_decorator_with_kwargs() -> None:
     """``@wait_for_decorator(...)`` invoked with keyword arguments."""
     incman = Incrementor()
 
-    @wait_for_decorator(fail_condition=0, delay=0.05, num_sec=2)
+    @wait_for_decorator(fail_condition=0, delay=0.05, timeout=2)
     def a_test() -> int:
         return incman.increment_with_sleep()
 
@@ -309,7 +292,7 @@ def test_decorator_with_empty_parens() -> None:
     """``@wait_for_decorator()`` invoked with empty parentheses uses defaults."""
     incman = Incrementor()
 
-    @wait_for_decorator(num_sec=2)
+    @wait_for_decorator(timeout=2)
     def a_test() -> bool:
         return incman.increment_with_sleep() != 0
 
@@ -320,7 +303,7 @@ def test_decorator_with_empty_parens() -> None:
 def test_decorator_bare() -> None:
     """``@wait_for_decorator`` applied without parentheses uses defaults."""
 
-    @wait_for_decorator(num_sec=2)
+    @wait_for_decorator(timeout=2)
     def succeeds() -> bool:
         return True
 
@@ -338,7 +321,7 @@ def test_func_kwargs_forwarded() -> None:
     def check(*, threshold: int) -> int:
         return threshold
 
-    result = wait_for(check, func_kwargs={"threshold": 42}, num_sec=1)
+    result = wait_for(check, func_kwargs={"threshold": 42}, timeout=1)
     assert result.out == 42
 
 
@@ -348,7 +331,7 @@ def test_func_kwargs_combined_with_func_args() -> None:
     def add(a: int, b: int, *, offset: int = 0) -> int:
         return a + b + offset
 
-    result = wait_for(add, func_args=[1, 2], func_kwargs={"offset": 10}, num_sec=1)
+    result = wait_for(add, func_args=[1, 2], func_kwargs={"offset": 10}, timeout=1)
     assert result.out == 13
 
 
@@ -357,21 +340,24 @@ def test_func_kwargs_combined_with_func_args() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_timeout_none_falls_through_to_num_sec() -> None:
-    """``timeout=None`` is treated as if timeout was not provided; ``num_sec`` is used."""
-    with pytest.raises(TimedOutError):
-        wait_for(_always_false, timeout=None, num_sec=0.1, delay=0.05)
+def test_num_sec_raises_type_error() -> None:
+    """Passing the removed ``num_sec`` kwarg raises ``TypeError`` immediately."""
+    with pytest.raises(TypeError, match="use 'timeout' instead"):
+        wait_for(_always_true, num_sec=30)
 
 
-# ---------------------------------------------------------------------------
-# Invalid time string
-# ---------------------------------------------------------------------------
+def test_timeout_none_falls_through_to_default() -> None:
+    """``timeout=None`` resolves to the 120 s default."""
+    from wait_for import _get_timeout_secs
+
+    assert _get_timeout_secs({"timeout": None}) == 120.0
 
 
-def test_invalid_time_string_raises_value_error() -> None:
-    """An unparseable ``timeout`` string raises ``ValueError``."""
-    with pytest.raises(ValueError, match="Could not parse"):
-        wait_for(_always_true, timeout="not a valid time string xyz")
+def test_timeout_not_provided_falls_through_to_default() -> None:
+    """Omitting ``timeout`` entirely resolves to the 120 s default."""
+    from wait_for import _get_timeout_secs
+
+    assert _get_timeout_secs({}) == 120.0
 
 
 # ---------------------------------------------------------------------------
@@ -381,21 +367,21 @@ def test_invalid_time_string_raises_value_error() -> None:
 
 def test_wait_for_result_index_access() -> None:
     """``WaitForResult`` supports index-based access for backward compatibility."""
-    result = wait_for(_always_true, num_sec=1)
+    result = wait_for(_always_true, timeout=1)
     assert result[0] is True
     assert isinstance(result[1], float)
 
 
 def test_wait_for_result_attribute_access() -> None:
     """``WaitForResult`` supports attribute-based access."""
-    result = wait_for(_always_true, num_sec=1)
+    result = wait_for(_always_true, timeout=1)
     assert result.out is True
     assert isinstance(result.duration, float)
 
 
 def test_wait_for_result_unpacking() -> None:
     """``WaitForResult`` supports tuple unpacking."""
-    out, duration = wait_for(_always_true, num_sec=1)
+    out, duration = wait_for(_always_true, timeout=1)
     assert out is True
     assert isinstance(duration, float)
 
@@ -406,40 +392,40 @@ def test_wait_for_result_unpacking() -> None:
 
 
 def test_expo_sleep_does_not_overshoot_timeout() -> None:
-    """With ``expo=True``, elapsed time must not significantly exceed ``num_sec``.
+    """With ``expo=True``, elapsed time must not significantly exceed ``timeout``.
 
     The exponential delay doubles each iteration and can grow well past the
     remaining time budget.  The wait loop should cap each sleep to the time
-    left so the total wall-clock duration stays close to ``num_sec``.
+    left so the total wall-clock duration stays close to ``timeout``.
     """
-    num_sec = 2.0
+    timeout = 2.0
     tolerance = 0.5
     _, duration = wait_for(
         _always_false,
         expo=True,
         delay=0.1,
-        num_sec=num_sec,
+        timeout=timeout,
         silent_failure=True,
     )
-    assert duration <= num_sec + tolerance, (
-        f"Expected <= {num_sec + tolerance}s, but waited {duration:.2f}s"
+    assert duration <= timeout + tolerance, (
+        f"Expected <= {timeout + tolerance}s, but waited {duration:.2f}s"
     )
 
 
 def test_large_fixed_delay_does_not_overshoot_timeout() -> None:
-    """A fixed ``delay`` larger than ``num_sec`` must not cause a long overshoot.
+    """A fixed ``delay`` larger than ``timeout`` must not cause a long overshoot.
 
     When delay exceeds the remaining budget, the sleep should be capped so
-    the total elapsed time stays close to ``num_sec``.
+    the total elapsed time stays close to ``timeout``.
     """
-    num_sec = 0.5
+    timeout = 0.5
     tolerance = 0.5
     _, duration = wait_for(
         _always_false,
         delay=10,
-        num_sec=num_sec,
+        timeout=timeout,
         silent_failure=True,
     )
-    assert duration <= num_sec + tolerance, (
-        f"Expected <= {num_sec + tolerance}s, but waited {duration:.2f}s"
+    assert duration <= timeout + tolerance, (
+        f"Expected <= {timeout + tolerance}s, but waited {duration:.2f}s"
     )

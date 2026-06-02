@@ -4,15 +4,11 @@ import inspect
 import logging
 import time
 from collections.abc import Callable, Iterable
-from datetime import datetime, timedelta
+from datetime import timedelta
 from functools import partial
 from threading import Timer
 from types import LambdaType
 from typing import Any, NamedTuple
-
-import parsedatetime
-
-calendar: parsedatetime.Calendar = parsedatetime.Calendar()
 
 
 class WaitForResult(NamedTuple):
@@ -34,28 +30,15 @@ default_hidden_logger.propagate = False
 default_hidden_logger.addHandler(logging.NullHandler())
 
 
-def _parse_time(t: str) -> float:
-    parsed, code = calendar.parse(t)
-    if code != 2:
-        raise ValueError(f"Could not parse {t}!")
-    parsed = datetime.fromtimestamp(time.mktime(parsed))
-    return (parsed - datetime.now()).total_seconds()
-
-
 def _get_timeout_secs(kwargs: dict[str, Any]) -> float:
-    if "timeout" in kwargs and kwargs["timeout"] is not None:
-        timeout = kwargs["timeout"]
-        if isinstance(timeout, (int, float)):
-            num_sec = float(timeout)
-        elif isinstance(timeout, str):
-            num_sec = _parse_time(timeout)
-        elif isinstance(timeout, timedelta):
-            num_sec = timeout.total_seconds()
-        else:
-            raise ValueError(f"Timeout got an unknown value {timeout}")
-    else:
-        num_sec = float(kwargs.get("num_sec", 120))
-    return num_sec
+    timeout = kwargs.get("timeout", None)
+    if timeout is None:
+        return 120.0
+    if isinstance(timeout, (int, float)):
+        return float(timeout)
+    if isinstance(timeout, timedelta):
+        return timeout.total_seconds()
+    raise ValueError(f"Timeout got an unknown value {timeout!r}")
 
 
 def is_lambda_function(obj: object) -> bool:
@@ -160,12 +143,9 @@ def wait_for(
         func (callable): A function to be run
         func_args (Iterable[Any]): A list of function arguments to be passed to func
         func_kwargs (dict[str, Any]): A dict of function keyword arguments to be passed to func
-        num_sec (int): An int describing the number of seconds to wait before timing out.
-        timeout (Union[int, timedelta, str]): Describes time to wait before timing out.
-            Either an int describing the number of seconds.
-            Or a :py:class:`timedelta` object.
-            Or a string formatted like ``1h 10m 5s``.
-            This then sets the ``num_sec`` variable.
+        timeout (Union[int, float, timedelta]): Maximum time to wait before timing out.
+            Either an int/float describing the number of seconds, or a
+            :py:class:`timedelta` object. Defaults to 120 seconds when not provided.
         expo (Any): A flag toggling exponential delay growth.
         message (Optional[str]): A description of func's operation. If None, defaults to the
             function's name.
@@ -205,12 +185,16 @@ def wait_for(
               (measured with :py:func:`time.monotonic`) until ``func()`` succeeded,
               or until the timeout was reached when ``silent_failure=True``.
     Raises:
-        TimedOutError: If num_sec is exceeded after an unsuccessful func() invocation and silent
+        TimedOutError: If timeout is exceeded after an unsuccessful func() invocation and silent
             failure is not set
     """
     # Hide this call in the detailed traceback
     # https://docs.pytest.org/en/latest/example/simple.html#writing-well-integrated-assertion-helpers
     __tracebackhide__ = True
+    if "num_sec" in kwargs:
+        raise TypeError(
+            "wait_for() got an unexpected keyword argument 'num_sec'; use 'timeout' instead"
+        )
     if func_args is None:
         func_args = []
     if func_kwargs is None:
@@ -339,7 +323,7 @@ def wait_for_decorator(*args: Any, **kwargs: Any) -> Any:
     It passes the function decorated to ``wait_for``
     Example:
     .. code-block:: python
-        @wait_for_decorator(num_sec=120)
+        @wait_for_decorator(timeout=120)
         def my_waiting_func():
             return do_something()
     You can also pass it without parameters, then it uses ``wait_for``'s defaults:

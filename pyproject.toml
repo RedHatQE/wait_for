@@ -29,9 +29,7 @@ classifiers = [
     "Topic :: Utilities",
 ]
 requires-python = ">=3.10"
-dependencies = [
-    "parsedatetime>=2.5",
-]
+dependencies = []
 dynamic = ["version"]
 
 [project.urls]
@@ -72,7 +70,3 @@ warn_return_any = true
 warn_unused_configs = true
 
 exclude = ["tests/"]
-
-[[tool.mypy.overrides]]
-module = "parsedatetime"
-ignore_missing_imports = true

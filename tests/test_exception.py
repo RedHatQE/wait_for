@@ -47,7 +47,7 @@ def test_handle_exception_v3():
     ``TimedOutError`` should be raised instead.
     """
     with pytest.raises(TimedOutError):
-        wait_for(raise_(MyError), handle_exception=True, num_sec=0.1)
+        wait_for(raise_(MyError), handle_exception=True, timeout=0.1)
 
 
 def test_handle_exception_raises_TimedOutError_from_occured_exception():
@@ -57,7 +57,7 @@ def test_handle_exception_raises_TimedOutError_from_occured_exception():
     ``TimedOutError`` should be raised from function-occurred exception instead.
     """
     try:
-        wait_for(raise_(MyError), handle_exception=True, num_sec=0.1)
+        wait_for(raise_(MyError), handle_exception=True, timeout=0.1)
     except TimedOutError as timeout_exception:
         assert isinstance(timeout_exception.__cause__, MyError)
     else:
@@ -71,7 +71,7 @@ def test_handle_specific_exception():
     ``TimedOutError`` should be raised.
     """
     with pytest.raises(TimedOutError):
-        wait_for(raise_(MyError), handle_exception=MyError, num_sec=0.1)
+        wait_for(raise_(MyError), handle_exception=MyError, timeout=0.1)
 
 
 def test_handle_specific_exception_in_iterable():
@@ -81,7 +81,7 @@ def test_handle_specific_exception_in_iterable():
     ``TimedOutError`` should be raised.
     """
     with pytest.raises(TimedOutError):
-        wait_for(raise_(MyError), handle_exception=(MyError,), num_sec=0.1)
+        wait_for(raise_(MyError), handle_exception=(MyError,), timeout=0.1)
 
 
 def test_handle_specific_exception_from_general_one():
@@ -91,7 +91,7 @@ def test_handle_specific_exception_from_general_one():
     ``TimedOutError`` should be raised.
     """
     with pytest.raises(TimedOutError):
-        wait_for(raise_(MyError), handle_exception=(Exception,), num_sec=0.1)
+        wait_for(raise_(MyError), handle_exception=(Exception,), timeout=0.1)
 
 
 def test_handle_specific_exceptions_in_iterable():
@@ -107,7 +107,7 @@ def test_handle_specific_exceptions_in_iterable():
                 MyError,
                 AnotherError,
             ),
-            num_sec=0.1,
+            timeout=0.1,
         )
 
 
@@ -137,7 +137,7 @@ def test_handle_exception_in_iterable_containing_not_exception_types_are_interpr
                 MyError, AnotherError, MyError(), AnotherError(), RuntimeError, RuntimeError("Foo")
             ),
             handle_exception=handle_exception,
-            num_sec=1,
+            timeout=1,
             delay=0.1,
         )
 
@@ -157,7 +157,7 @@ def test_handle_exceptions_in_empty_iterable_are_interpreted_as_False(handle_exc
     An exception raised by the waited-upon function should bubble up.
     """
     with pytest.raises(MyError):
-        wait_for(raise_(MyError), handle_exception=handle_exception, num_sec=1, delay=0.1)
+        wait_for(raise_(MyError), handle_exception=handle_exception, timeout=1, delay=0.1)
 
 
 def test_not_handle_unexpected_exception():
@@ -167,7 +167,7 @@ def test_not_handle_unexpected_exception():
     ``AnotherError`` should be raised.
     """
     with pytest.raises(AnotherError):
-        wait_for(raise_(AnotherError), handle_exception=MyError, num_sec=0.1)
+        wait_for(raise_(AnotherError), handle_exception=MyError, timeout=0.1)
 
 
 def test_not_handle_unexpected_exceptions():
@@ -183,7 +183,7 @@ def test_not_handle_unexpected_exceptions():
                 ValueError,
                 RuntimeError,
             ),
-            num_sec=0.1,
+            timeout=0.1,
         )
 
 
@@ -192,16 +192,16 @@ def test_handle_exception_silent_failure():
 
     The time spent calling the waited-upon function should be returned.
     """
-    _, num_sec = wait_for(
+    _, duration = wait_for(
         raise_(MyError),
         handle_exception=True,
-        num_sec=0.1,
+        timeout=0.1,
         silent_failure=True,
     )
-    assert isinstance(num_sec, float)
+    assert isinstance(duration, float)
 
 
 def test_reraise_exception():
     """Original exception is re-raised"""
     with pytest.raises(MyError):
-        wait_for(raise_(MyError), handle_exception=True, num_sec=0.1, raise_original=True)
+        wait_for(raise_(MyError), handle_exception=True, timeout=0.1, raise_original=True)

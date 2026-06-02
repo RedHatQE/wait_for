@@ -65,14 +65,9 @@ a hidden logger (``wait_for.default``) that discards output.
 
 **Keyword-only arguments (passed via** ``**kwargs`` **):**
 
-``num_sec`` *(int | float)* -- Maximum number of seconds to wait before timing out.
-Default: ``120``. Ignored when ``timeout`` is provided.
-
-``timeout`` *(int | float | timedelta | str)* -- Maximum time to wait before timing out.
-Accepts an ``int``/``float`` (seconds), a ``datetime.timedelta`` object, or a
-human-readable string parsed by `parsedatetime <https://pypi.org/project/parsedatetime/>`_
-(e.g. ``"1h 10m 5s"``, ``"2 minutes"``). When provided, this takes precedence
-over ``num_sec``.
+``timeout`` *(int | float | timedelta)* -- Maximum time to wait before timing out.
+Accepts an ``int``/``float`` (seconds) or a ``datetime.timedelta`` object.
+Default: ``120`` seconds when not provided.
 
 ``delay`` *(int | float)* -- Seconds to sleep between attempts. Default: ``1``.
 
@@ -171,7 +166,7 @@ All keyword arguments accepted by ``wait_for`` can be passed to the decorator.
 
    from wait_for import wait_for_decorator
 
-   @wait_for_decorator(num_sec=120, fail_condition=0, delay=0.05)
+   @wait_for_decorator(timeout=120, fail_condition=0, delay=0.05)
    def my_waiting_func():
        return do_something()
 
@@ -274,24 +269,16 @@ Pass arguments to a lambda and wait until the condition is met:
        delay=0.05
    )
 
-Human-readable timeout strings
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Timeout with timedelta
+~~~~~~~~~~~~~~~~~~~~~~~
 
-Use natural language for the timeout value:
-
-.. code-block:: python
-
-   from functools import partial
-
-   func = partial(lambda: incman.i_sleep_a_lot() > 10)
-   result, elapsed = wait_for(func, timeout="2s", delay=1)
-
-The ``timeout`` parameter also accepts ``datetime.timedelta`` objects:
+Use a ``datetime.timedelta`` for the timeout value:
 
 .. code-block:: python
 
    from datetime import timedelta
 
+   func = lambda: incman.i_sleep_a_lot() > 10
    result, elapsed = wait_for(func, timeout=timedelta(minutes=5), delay=1)
 
 Exponential backoff
@@ -305,7 +292,7 @@ Double the delay after each failed attempt:
        my_flaky_function,
        delay=1,
        expo=True,
-       num_sec=120
+       timeout=120
    )
 
 Exception handling
@@ -321,20 +308,20 @@ Catch exceptions during waiting and convert them to retries:
    result, elapsed = wait_for(
        might_raise,
        handle_exception=True,
-       num_sec=30
+       timeout=30
    )
 
    # Catch only specific exception types
    result, elapsed = wait_for(
        might_raise,
        handle_exception=(ConnectionError, TimeoutError),
-       num_sec=30
+       timeout=30
    )
 
    # Re-raise the original exception instead of TimedOutError
    try:
        wait_for(might_raise, handle_exception=True,
-                num_sec=5, raise_original=True)
+                timeout=5, raise_original=True)
    except ConnectionError:
        print("Original exception re-raised")
 
@@ -349,7 +336,7 @@ Use a function to define complex failure logic:
    result, elapsed = wait_for(
        incman.i_sleep_a_lot,
        fail_condition=lambda value: value <= 10,
-       num_sec=30,
+       timeout=30,
        delay=0.1
    )
 
@@ -362,10 +349,10 @@ Return the last result instead of raising on timeout:
 
    result, elapsed = wait_for(
        lambda: some_check(),
-       num_sec=5,
+       timeout=5,
        silent_failure=True
    )
-   # result contains the last return value; elapsed == num_sec
+   # result contains the last return value; elapsed == timeout
 
 Decorator usage
 ~~~~~~~~~~~~~~~
