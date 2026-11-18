@@ -3,9 +3,10 @@ from __future__ import annotations
 import inspect
 import logging
 import time
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Iterator
 from datetime import timedelta
 from functools import partial
+from itertools import tee
 from threading import Timer
 from types import LambdaType
 from typing import Any, NamedTuple
@@ -238,7 +239,11 @@ def wait_for(
                 "wait_for hit an exception: %(exc_name)s: %(exc)s",
                 {"exc_name": type(e).__name__, "exc": e},
             )
-            if _check_must_be_handled(e, handle_exception):
+            handle = handle_exception
+            if isinstance(handle, Iterator):
+                # Leave one iterator at the start for the next attempt.
+                handle, handle_exception = tee(handle)
+            if _check_must_be_handled(e, handle):
                 out = fail_condition
                 exc = e
                 logger.info(

@@ -84,6 +84,19 @@ def test_handle_specific_exception_in_iterable():
         wait_for(raise_(MyError), handle_exception=(MyError,), timeout=0.1)
 
 
+def test_retry_exception_types_from_iterator():
+    exceptions = iter([MyError(), AnotherError(), MyError()])
+
+    def poll():
+        exc = next(exceptions, None)
+        if exc is not None:
+            raise exc
+        return "ready"
+
+    result = wait_for(poll, handle_exception=iter([MyError, AnotherError]), timeout=1, delay=0)
+    assert result.out == "ready"
+
+
 def test_handle_specific_exception_from_general_one():
     """Set ``handle_exception`` to ``(Exception,)``.
 
